@@ -5,8 +5,10 @@ var server = require("http").Server(app);
 var io = require("socket.io").listen(server);
 
 class Player {
-  constructor(username) {
+  constructor(username, startX) {
     this.id = username;
+    this.type = "dude";
+    this.x = startX;
   }
 }
 
@@ -21,28 +23,39 @@ app.get("/", function(req, res) {
   res.sendFile(__dirname + "/myGame.html");
 });
 
-
 io.on("connection", function(socket) {
-  socket.broadcast.emit("newPlayer", players);
-  userCount++;
   connections.push(socket);
   console.log("Connected: %s sockets connected", connections.length);
-  players.push(new Player(socket.id));
+  players.push(new Player(socket.id, Math.floor(Math.random() * 400) + 200));
   socket.emit("currentPlayers", players);
+  socket.broadcast.emit("newPlayer", players);
 
-  socket.on("disconnect", function(data) {
-    connections.splice(connections.indexOf(socket, 1));
-    for (let i  = 0 ; i < players.length; i++) {
+  socket.on("disconnecting", function(data) {
+    for (let i = 0; i < players.length; i++) {
       if (socket.id == players[i].id) {
-        players.splice(i,1);
+        console.log(players[i].id);
+        io.emit("deletePlayer", players[i].id);
+        players.splice(i, 1);
       }
     }
     players.splice(connections.indexOf(socket, 1));
     console.log("Disconnected: %s sockets connected", connections.length);
-    socket.disconnect();
   });
-});  
+  socket.on("playerMovement", function(movementData) {
+    let index = getIndexFromSocketId(players, socket.id);
+    console.log(index);
+    players[index].x = movementData.x;
+    socket.broadcast.emit("playerMoved", players[index]);
+  });
+});
 
+function getIndexFromSocketId(players, socketId) {
+  for (let i = 0; i < players.length; i++) {
+    if (socketId == players[i].id) {
+      return i;
+    }
+  }
+}
 
 server.listen(port, function() {
   console.log(`Listening on ${server.address().port}`);
