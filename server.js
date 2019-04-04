@@ -1,5 +1,6 @@
 var express = require("express");
 var app = express();
+var port = 8080 || process.env.PORT;
 var server = require("http").Server(app);
 var io = require("socket.io").listen(server);
 
@@ -43,6 +44,6 @@ io.on("connection", function(socket) {
 });  
 
 
-server.listen(8081, function() {
+server.listen(port, function() {
   console.log(`Listening on ${server.address().port}`);
 });
