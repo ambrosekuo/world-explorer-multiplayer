@@ -8,12 +8,12 @@ class Player {
 
 var config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: window.innerWidth,
+  height: window.innerHeight,
   physics: {
     default: "arcade",
     arcade: {
-      gravity: { y: 300 },
+      gravity: { y: 800 },
       debug: false
     }
   },
@@ -28,13 +28,25 @@ var game = new Phaser.Game(config);
 var platforms;
 var player;
 
+// Gets a platform group an adds more platforma
+function createLevel(platforms) {
+  platforms
+  .create(400, 568, "ground")
+  .setScale(2)
+  .refreshBody();
+
+  platforms
+  .create(200, 500, "ground")
+}
+
 function preload() {
   this.load.image("sky", "assets/sky.png");
   this.load.image("ground", "assets/platform.png");
   this.load.image("sky", "assets/sky.png");
-  this.load.spritesheet("dude", "assets/dude.png", {
-    frameWidth: 32,
-    frameHeight: 48
+
+  this.load.spritesheet("dude", "assets/Characters/PNG/Zombie/zombie_tilesheet.png", {
+    frameWidth: 80,
+    frameHeight: 110
   });
 }
 
@@ -44,27 +56,23 @@ function create() {
 
   this.add.image(400, 300, "sky");
   platforms = this.physics.add.staticGroup();
-  platforms
-    .create(400, 568, "ground")
-    .setScale(2)
-    .refreshBody();
-
+  createLevel(platforms);
   this.anims.create({
     key: "left",
-    frames: this.anims.generateFrameNumbers("dude", { start: 0, end: 3 }),
+    frames: [{ key: "dude", frame: 2},{ key: "dude", frame: 16}, { key: "dude", frame: 10}],
     frameRate: 10,
     repeat: -1
   });
 
   this.anims.create({
     key: "turn",
-    frames: [{ key: "dude", frame: 4 }],
-    frameRate: 20
+    frames: [{ key: "dude", frame: 23 }],
+    frameRate: 3
   });
-
+  
   this.anims.create({
     key: "right",
-    frames: this.anims.generateFrameNumbers("dude", { start: 5, end: 8 }),
+    frames: [{ key: "dude", frame: 2},{ key: "dude", frame: 16}, { key: "dude", frame: 10}],
     frameRate: 10,
     repeat: -1
   });
@@ -98,8 +106,7 @@ function create() {
   this.socket.on("playerMoved", player => {
     self.otherPlayers.getChildren().forEach(otherPlayer => {
       if (player.id === otherPlayer.playerId) {
-        console.log(otherPlayer.y);
-        otherPlayer.setPosition(player.x, otherPlayer.y);
+        otherPlayer.setPosition(player.x, player.y);
       }
     });
   });
@@ -108,10 +115,11 @@ function create() {
 function update() {
   if (player) {
     if (cursors.left.isDown) {
+      player.flipX = true;
       player.setVelocityX(-160);
-
       player.anims.play("left", true);
     } else if (cursors.right.isDown) {
+      player.flipX = false;
       player.setVelocityX(160);
 
       player.anims.play("right", true);
@@ -121,21 +129,24 @@ function update() {
       player.anims.play("turn");
     }
 
-    if (cursors.up.isDown && player.body.touching.down) {
+    if (cursors.space.isDown && player.body.touching.down) {
       player.setVelocityY(-330);
     }
     this.physics.add.collider(this.otherPlayers, platforms);
     // emit player movement
     let x = player.x;
+    let y = player.y
     if (player.oldPosition == null) {
-        player.oldPosition = {x: player.x};
+        player.oldPosition = {x: player.x, y: player.y};
     }
     if (x !== player.oldPosition.x) {
       this.socket.emit("playerMovement", {
-        x: player.x
+        x: player.x,
+        y: player.y
       });
       player.oldPosition = {
-        x: player.x
+        x: player.x,
+        y: player.y
       };
     }
   }
@@ -146,7 +157,7 @@ function addNewPlayer(self, otherPlayer) {
 }
 
 function addOtherPlayer(self, playerInfo) {
-  const otherPlayer = self.physics.add.sprite(playerInfo.x, 450, "dude");
+  const otherPlayer = self.physics.add.sprite(playerInfo.x, playerInfo.y, playerInfo.type);
   otherPlayer.setBounce(0.2);
   otherPlayer.setCollideWorldBounds(true);
   otherPlayer.playerId = playerInfo.id;
@@ -154,7 +165,7 @@ function addOtherPlayer(self, playerInfo) {
 }
 
 function addPlayer(self, thisPlayer) {
-  player = self.physics.add.sprite(thisPlayer.x, 450, "dude");
+  player = self.physics.add.sprite(thisPlayer.x, thisPlayer.y, thisPlayer.type);
   player.id = thisPlayer.id;
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
@@ -162,5 +173,5 @@ function addPlayer(self, thisPlayer) {
 }
 
 function onConnect() {
-  player = this.physics.add.sprite(300, 450, "dude");
+
 }

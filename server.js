@@ -9,6 +9,7 @@ class Player {
     this.id = username;
     this.type = "dude";
     this.x = startX;
+    this.y = 450;
   }
 }
 
@@ -45,6 +46,7 @@ io.on("connection", function(socket) {
     let index = getIndexFromSocketId(players, socket.id);
     console.log(index);
     players[index].x = movementData.x;
+    players[index].y = movementData.y;
     socket.broadcast.emit("playerMoved", players[index]);
   });
 });
