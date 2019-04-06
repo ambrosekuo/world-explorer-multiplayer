@@ -1,34 +1,5 @@
 const animalArray =[
-  "bear.png",
-  "buffalo.png",
-  "chick.png",
-  "chicken.png",
-  "cow.png",
-  "crocodile.png",
-  "dog.png",
-  "duck.png",
-  "elephant.png",
-  "frog.png",
-  "giraffe.png",
-  "goat.png",
-  "gorilla.png",
-  "hippo.png",
-  "horse.png",
-  "monkey.png",
-  "moose.png",
-  "narwhal.png",
-  "owl.png",
-  "panda.png",
-  "parrot.png",
-  "penguin.png",
-  "pig.png",
-  "rabbit.png",
-  "rhino.png",
-  "sloth.png",
-  "snake.png",
-  "walrus.png",
-  "whale.png",
-  "zebra.png"
+  'penguin.png'
 ];
 
 class Player {
@@ -234,6 +205,7 @@ function update() {
       player.flipX = false;
       container.body.setVelocityX(160);
 
+      console.log()
       player.anims.play(`${player.playerType}-right`, true);
     } else {
       container.body.setVelocityX(0);
