@@ -1,3 +1,38 @@
+const animalArray =[
+  "bear.png",
+  "buffalo.png",
+  "chick.png",
+  "chicken.png",
+  "cow.png",
+  "crocodile.png",
+  "dirToArray.sh",
+  "dog.png",
+  "duck.png",
+  "elephant.png",
+  "frog.png",
+  "giraffe.png",
+  "goat.png",
+  "gorilla.png",
+  "hippo.png",
+  "horse.png",
+  "monkey.png",
+  "moose.png",
+  "narwhal.png",
+  "owl.png",
+  "panda.png",
+  "parrot.png",
+  "penguin.png",
+  "pig.png",
+  "rabbit.png",
+  "rhino.png",
+  "sloth.png",
+  "snake.png",
+  "Thumbs.db",
+  "walrus.png",
+  "whale.png",
+  "zebra.png"
+];
+
 class Player {
   constructor(username, startX) {
     this.id = username;
@@ -32,7 +67,6 @@ var game = new Phaser.Game(config);
 console.log(game);
 //game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
 var platforms;
-var block;
 var player;
 
 // Gets a platform group an adds more platforma
@@ -46,6 +80,11 @@ function preload() {
   this.load.image("ground", "assets/platform.png");
   this.load.image("sky", "assets/sky.png");
   this.load.image("house", "assets/Background/PNG/Retina/houseSmall1.png");
+
+  animalArray.forEach(animal => {
+    console.log(animal.substring(animal.indexOf(".")+1));
+    this.load.image(animal.substring(0,animal.indexOf(".")), `assets/Animals/PNG/Square (outline)/${animal}`);
+  });
 
   typeOfChars.forEach(type => {
     this.load.spritesheet(
@@ -187,50 +226,50 @@ function create() {
 
 function update() {
   if (player) {
-    if (player.y >= mapHeight-player.height/2) {
-      player.x = 0;
-      player.y = 0;
+    if (container.y >= mapHeight-container.height/2) {
+      container.x = 0;
+      container.y = 0;
     }
     if (cursors.left.isDown) {
       player.flipX = true;
-      player.setVelocityX(-160);
+      container.body.setVelocityX(-160);
       player.anims.play(`${player.playerType}-left`, true);
     } else if (cursors.right.isDown) {
       player.flipX = false;
-      player.setVelocityX(160);
+      container.body.setVelocityX(160);
 
       player.anims.play(`${player.playerType}-right`, true);
     } else {
-      player.setVelocityX(0);
+      container.body.setVelocityX(0);
 
       player.anims.play(`${player.playerType}-turn`);
     }
 
-    if (cursors.space.isDown && player.body.touching.down) {
-      player.setVelocityY(-330);
+    if (cursors.space.isDown && container.body.touching.down) {
+      container.body.setVelocityY(-330);
     }
     this.physics.add.collider(this.otherPlayers, platforms);
     // emit player movement
-    let x = player.x;
-    let y = player.y;
-    if (player.oldPosition == null) {
-      player.oldPosition = { x: player.x, y: player.y };
+    let x = container.x;
+    let y = container.y;
+    if (container.oldPosition == null) {
+      container.oldPosition = { x: container.x, y: container.y };
     }
-    if (x !== player.oldPosition.x) {
+    if (x !== container.oldPosition.x) {
       this.socket.emit("playerMovement", {
-        x: player.x,
-        y: player.y
+        x: container.x,
+        y: container.y
       });
-      player.oldPosition = {
-        x: player.x,
-        y: player.y
+      container.oldPosition = {
+        x: container.x,
+        y: container.y
       };
     }
         //  Position the center of the camera on the player
     //  We -400 because the camera width is 800px and
     //  we want the center of the camera on the player, not the left-hand side of it
 
-    this.cameras.main.scrollX = player.x - 400;
+    this.cameras.main.scrollX = container.x - 400;
   }
 }
 
@@ -256,17 +295,31 @@ function addOtherPlayer(self, playerInfo) {
   self.otherPlayers.add(otherPlayer);
 }
 
+
+var head;
+var container;
+
 function addPlayer(self, thisPlayer, cameras) {
-  player = self.physics.add.sprite(
+  container = self.add.container(0, 200);
+  player = self.add.sprite(
     thisPlayer.x,
     thisPlayer.y,
     thisPlayer.playerType
   ).setScale(0.5, 0.5);
+  container.add(player);
+  const animal = self.add.sprite(
+    thisPlayer.x,
+    thisPlayer.y,
+    "penguin"
+  ).setScale(0.2, 0.2);
+  container.add(animal);
+
   player.id = thisPlayer.id;
   player.playerType = thisPlayer.playerType;
-  player.setBounce(0.2);
-  player.setCollideWorldBounds(true);
-  self.physics.add.collider(player, platforms);
+
+  self.physics.world.enable(container);
+  container.body.setBounce(0.2).setCollideWorldBounds(true);
+  self.physics.add.collider(container, platforms);
 
 }
 

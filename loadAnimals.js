@@ -1,4 +1,4 @@
-const animalArray =[
+export const animalArray =[
   bear.png,
   buffalo.png,
   chick.png,
