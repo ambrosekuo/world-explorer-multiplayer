@@ -5,7 +5,6 @@ const animalArray =[
   "chicken.png",
   "cow.png",
   "crocodile.png",
-  "dirToArray.sh",
   "dog.png",
   "duck.png",
   "elephant.png",
@@ -27,7 +26,6 @@ const animalArray =[
   "rhino.png",
   "sloth.png",
   "snake.png",
-  "Thumbs.db",
   "walrus.png",
   "whale.png",
   "zebra.png"
@@ -82,7 +80,6 @@ function preload() {
   this.load.image("house", "assets/Background/PNG/Retina/houseSmall1.png");
 
   animalArray.forEach(animal => {
-    console.log(animal.substring(animal.indexOf(".")+1));
     this.load.image(animal.substring(0,animal.indexOf(".")), `assets/Animals/PNG/Square (outline)/${animal}`);
   });
 
@@ -226,9 +223,8 @@ function create() {
 
 function update() {
   if (player) {
-    if (container.y >= mapHeight-container.height/2) {
-      container.x = 0;
-      container.y = 0;
+    if (container.y >= mapHeight-container.height) {
+      container.setPosition(0,0);
     }
     if (cursors.left.isDown) {
       player.flipX = true;
@@ -300,12 +296,14 @@ var head;
 var container;
 
 function addPlayer(self, thisPlayer, cameras) {
-  container = self.add.container(0, 200);
+  container = self.add.container(thisPlayer.x, thisPlayer.y);
   player = self.add.sprite(
     thisPlayer.x,
     thisPlayer.y,
     thisPlayer.playerType
   ).setScale(0.5, 0.5);
+  console.log(player.width, player.height);
+  container.setSize(player.width/2, player.height/2);
   container.add(player);
   const animal = self.add.sprite(
     thisPlayer.x,
