@@ -1,20 +1,24 @@
 class Player {
   constructor(username, startX) {
     this.id = username;
-    this.type = "dude";
+    this.playerType = "female";
     this.x = startX;
   }
 }
 
+const mapHeight = 400;
+
 var config = {
-  type: Phaser.AUTO,
+  type: Phaser.canvas,
   width: window.innerWidth,
-  height: window.innerHeight,
+  height: mapHeight,
   physics: {
     default: "arcade",
     arcade: {
-      gravity: { y: 800 },
-      debug: false
+      gravity: { y: 1100 },
+      debug: false,
+      width: 4000,
+      height: mapHeight,
     }
   },
   scene: {
@@ -25,57 +29,125 @@ var config = {
 };
 
 var game = new Phaser.Game(config);
+console.log(game);
+//game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
 var platforms;
+var block;
 var player;
 
 // Gets a platform group an adds more platforma
-function createLevel(platforms) {
-  platforms
-  .create(400, 568, "ground")
-  .setScale(2)
-  .refreshBody();
-
-  platforms
-  .create(200, 500, "ground")
-}
+const typeOfChars = ["Adventurer", "Female", "Player", "Soldier", "Zombie"];
 
 function preload() {
-  this.load.image("sky", "assets/sky.png");
+  this.load.image(
+    "desert",
+    "assets/Background/Backgrounds/backgroundColorDesert.png"
+  );
   this.load.image("ground", "assets/platform.png");
   this.load.image("sky", "assets/sky.png");
+  this.load.image("house", "assets/Background/PNG/Retina/houseSmall1.png");
 
-  this.load.spritesheet("dude", "assets/Characters/PNG/Zombie/zombie_tilesheet.png", {
-    frameWidth: 80,
-    frameHeight: 110
+  typeOfChars.forEach(type => {
+    this.load.spritesheet(
+      type,
+      `assets/Characters/PNG/${type}/${type}_tilesheet.png`,
+      {
+        frameWidth: 80,
+        frameHeight: 110
+      }
+    );
   });
 }
 
+
+function createBlocks(platforms) {
+  let lastY = 300;
+  for (let i = 1; i < 50; i++) {
+    const addY = Math.floor(Math.random()*30); // Vertical space between blocks
+    platforms.create(i*100, lastY-addY, "house").setScale(0.3, 0.3).refreshBody();;
+    lastY -= addY;
+    if (lastY <= 150) {
+      lastY = 350;
+    }
+  }
+}
+
+function createLevel(platforms) {
+  platforms
+    .create(400, 400, "ground")
+    .setScale(100, 1)
+    .refreshBody();
+
+
+  platforms.create(20, 300, "house").setScale(0.5).refreshBody();
+  createBlocks(platforms); 
+
+  console.log(platforms.getChildren()[1].width + "   " + platforms.getChildren()[1].height + 
+  "||| " + platforms.getChildren()[1].body.height + "   " + platforms.getChildren()[1].body.height);
+
+  /*
+  platforms
+    .getChildren()[1]
+    .setScale(0.333,0.5, true);
+
+    platforms
+    .getChildren()[1]
+    .body
+    .setSize(50,50).
+      .refreshBody();
+
+    */
+}
+
+const gameSizeX = 10000;
+const gameSizeY = 1100;
+
 function create() {
+  
+  //this.cameras.main.setBounds(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+  this.cameras.main.setBounds(0, 0, 4000, 400);
+  
+  this.cameras.main.setZoom(1);
+  
+  var background = this.add.tileSprite(0, 0, 10000, 800, "desert"); 
+
+
   var self = this;
   this.otherPlayers = this.physics.add.group();
 
-  this.add.image(400, 300, "sky");
   platforms = this.physics.add.staticGroup();
+  //block = this.physics.add.staticImage(120, 300, 'house').setScale;
   createLevel(platforms);
-  this.anims.create({
-    key: "left",
-    frames: [{ key: "dude", frame: 2},{ key: "dude", frame: 16}, { key: "dude", frame: 10}],
-    frameRate: 10,
-    repeat: -1
-  });
 
-  this.anims.create({
-    key: "turn",
-    frames: [{ key: "dude", frame: 23 }],
-    frameRate: 3
-  });
-  
-  this.anims.create({
-    key: "right",
-    frames: [{ key: "dude", frame: 2},{ key: "dude", frame: 16}, { key: "dude", frame: 10}],
-    frameRate: 10,
-    repeat: -1
-  });
+  function charFactory(type) {
+    this.anims.create({
+      key: `${type}-left`,
+      frames: [
+        { key: type, frame: 16 },
+        { key: type, frame: 17 },
+      ],
+      frameRate: 15,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: `${type}-turn`,
+      frames: [{ key: type, frame: 23 }],
+      frameRate: 3
+    });
+
+    this.anims.create({
+      key: `${type}-right`,
+      frames: [
+        { key: type, frame: 16 },
+        { key: type, frame: 17 },
+      ],
+      frameRate: 15,
+      repeat: -1
+    });
+  }
+
+  typeOfChars.forEach(charFactory.bind(this));
 
   cursors = this.input.keyboard.createCursorKeys();
 
@@ -84,9 +156,10 @@ function create() {
   this.socket.on("currentPlayers", players => {
     players.forEach(player => {
       if (player.id === self.socket.id) {
-        addPlayer(self, player);
+        addPlayer(self, player, this.cameras);
       } else {
         addOtherPlayer(self, player);
+        this.cameras.main.startFollow(player);
       }
     });
   });
@@ -114,19 +187,23 @@ function create() {
 
 function update() {
   if (player) {
+    if (player.y >= mapHeight-player.height/2) {
+      player.x = 0;
+      player.y = 0;
+    }
     if (cursors.left.isDown) {
       player.flipX = true;
       player.setVelocityX(-160);
-      player.anims.play("left", true);
+      player.anims.play(`${player.playerType}-left`, true);
     } else if (cursors.right.isDown) {
       player.flipX = false;
       player.setVelocityX(160);
 
-      player.anims.play("right", true);
+      player.anims.play(`${player.playerType}-right`, true);
     } else {
       player.setVelocityX(0);
 
-      player.anims.play("turn");
+      player.anims.play(`${player.playerType}-turn`);
     }
 
     if (cursors.space.isDown && player.body.touching.down) {
@@ -135,9 +212,9 @@ function update() {
     this.physics.add.collider(this.otherPlayers, platforms);
     // emit player movement
     let x = player.x;
-    let y = player.y
+    let y = player.y;
     if (player.oldPosition == null) {
-        player.oldPosition = {x: player.x, y: player.y};
+      player.oldPosition = { x: player.x, y: player.y };
     }
     if (x !== player.oldPosition.x) {
       this.socket.emit("playerMovement", {
@@ -149,6 +226,17 @@ function update() {
         y: player.y
       };
     }
+        //  Position the center of the camera on the player
+    //  We -400 because the camera width is 800px and
+    //  we want the center of the camera on the player, not the left-hand side of it
+
+    this.cameras.main.scrollX = player.x - 400;
+  }
+}
+
+function spawnRandomBlocks(platforms) {
+  for (let i = 0; i < 50; i++) {
+
   }
 }
 
@@ -157,21 +245,29 @@ function addNewPlayer(self, otherPlayer) {
 }
 
 function addOtherPlayer(self, playerInfo) {
-  const otherPlayer = self.physics.add.sprite(playerInfo.x, playerInfo.y, playerInfo.type);
+  const otherPlayer = self.physics.add.sprite(
+    playerInfo.x,
+    playerInfo.y,
+    playerInfo.playerType
+  ).setScale(0.5, 0.5);
   otherPlayer.setBounce(0.2);
   otherPlayer.setCollideWorldBounds(true);
   otherPlayer.playerId = playerInfo.id;
   self.otherPlayers.add(otherPlayer);
 }
 
-function addPlayer(self, thisPlayer) {
-  player = self.physics.add.sprite(thisPlayer.x, thisPlayer.y, thisPlayer.type);
+function addPlayer(self, thisPlayer, cameras) {
+  player = self.physics.add.sprite(
+    thisPlayer.x,
+    thisPlayer.y,
+    thisPlayer.playerType
+  ).setScale(0.5, 0.5);
   player.id = thisPlayer.id;
+  player.playerType = thisPlayer.playerType;
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
   self.physics.add.collider(player, platforms);
-}
-
-function onConnect() {
 
 }
+
+function onConnect() {}

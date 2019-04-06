@@ -7,9 +7,9 @@ var io = require("socket.io").listen(server);
 class Player {
   constructor(username, startX) {
     this.id = username;
-    this.type = "dude";
+    this.playerType = "Female";
     this.x = startX;
-    this.y = 450;
+    this.y = 0;
   }
 }
 
@@ -27,7 +27,8 @@ app.get("/", function(req, res) {
 io.on("connection", function(socket) {
   connections.push(socket);
   console.log("Connected: %s sockets connected", connections.length);
-  players.push(new Player(socket.id, Math.floor(Math.random() * 400) + 200));
+  //players.push(new Player(socket.id, Math.floor(Math.random() * 400) + 200));
+  players.push(new Player(socket.id, 0));
   socket.emit("currentPlayers", players);
   socket.broadcast.emit("newPlayer", players);
 
