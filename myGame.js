@@ -83,12 +83,7 @@ function preload() {
     this.load.image(animal.substring(0,animal.indexOf(".")), `assets/Animals/PNG/Square (outline)/${animal}`);
   });
 
-  this.load.spritesheet('Female', `assets/Characters/PNG/Female/Female_tilesheet.png`,  {
-    frameWidth: 80,
-    frameHeight: 110
-  });
-
-  /* typeOfChars.forEach(type => {
+   typeOfChars.forEach(type => {
     this.load.spritesheet(
       type,
       `assets/Characters/PNG/${type}/${type}_tilesheet.png`,
@@ -97,7 +92,7 @@ function preload() {
         frameHeight: 110
       }
     );
-  }); */
+  }); 
 }
 
 
@@ -160,7 +155,7 @@ function create() {
   //block = this.physics.add.staticImage(120, 300, 'house').setScale;
   createLevel(platforms);
 
-  /*
+  
   function charFactory(type) {
     this.anims.create({
       key: `${type}-left`,
@@ -187,36 +182,11 @@ function create() {
       frameRate: 15,
       repeat: -1
     });
-  } */
+  } 
 
-  //typeOfChars.forEach(charFactory.bind(this));
+  typeOfChars.forEach(charFactory.bind(this));
 
 
-  this.anims.create({
-    key: `Female-left`,
-    frames: [
-      { key: 'Female', frame: 16 },
-      { key: 'Female', frame: 17 },
-    ],
-    frameRate: 15,
-    repeat: -1
-  });
-
-  this.anims.create({
-    key: `Female-turn`,
-    frames: [{ key: 'Female', frame: 23 }],
-    frameRate: 3
-  });
-
-  this.anims.create({
-    key: `Female-right`,
-    frames: [
-      { key: 'Female', frame: 16 },
-      { key: 'Female', frame: 17 },
-    ],
-    frameRate: 15,
-    repeat: -1
-  });
 
   cursors = this.input.keyboard.createCursorKeys();
 
