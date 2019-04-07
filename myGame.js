@@ -234,10 +234,10 @@ function update() {
       player.flipX = false;
       container.body.setVelocityX(160);
 
-      player.anims.play(`${player.playerType}-right`, true);
+      //player.anims.play(`${player.playerType}-right`, true);
     } else {
       container.body.setVelocityX(0);
-
+      console.log(`${player.playerType}-turn`);
       player.anims.play(`${player.playerType}-turn`);
     }
 
