@@ -86,7 +86,7 @@ function preload() {
    typeOfChars.forEach(type => {
     this.load.spritesheet(
       type,
-      `assets/Characters/PNG/${type}/${type}_tilesheet.png`,
+      `assets/Characters/PNG/${type}/${type.toLowerCase()}_tilesheet.png`,
       {
         frameWidth: 80,
         frameHeight: 110
