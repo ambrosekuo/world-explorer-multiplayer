@@ -61,6 +61,19 @@ var config = {
   }
 };
 
+function loadMainMap() {
+
+}
+
+function loadMultiGame() {
+
+}
+
+function loadPractice() {
+
+}
+
+
 var game = new Phaser.Game(config);
 console.log(game);
 //game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
@@ -171,6 +184,7 @@ function addControls(self) {
     .setDepth(1);
   left.setInteractive();
   left.on("pointerdown", function(pointer, localX, localY, event) {
+    left.setAlpha(0.5);
     if (player != null) {
       touchInput = true;
       player.flipX = true;
@@ -178,7 +192,9 @@ function addControls(self) {
       player.anims.play(`${player.playerType}-left`, true);
     }
   });
+  
   left.on("pointerup", function(pointer, event) {
+    left.setAlpha(1);
     container.body.setVelocityX(0);
     player.anims.play(`${player.playerType}-turn`);
   });
@@ -190,6 +206,7 @@ function addControls(self) {
   right.setInteractive();
   right.on("pointerdown", function(pointer, localX, localY, event) {
     if (player != null) {
+      right.setAlpha(0.5);
       touchInput = true;
       player.flipX = false;
       container.body.setVelocityX(160);
@@ -198,6 +215,7 @@ function addControls(self) {
   });
 
   right.on("pointerup", function(pointer, event) {
+    right.setAlpha(1);
     container.body.setVelocityX(0);
     player.anims.play(`${player.playerType}-turn`);
   });
@@ -208,12 +226,16 @@ function addControls(self) {
     .setDepth(1).setScale(1.5,1.5);
   jump.setInteractive();
   jump.on("pointerdown", function(pointer, localX, localY, event) {
+    jump.setAlpha(0.5);
     if (player != null && container.body.touching.down) {
       touchInput = true;
       container.body.setVelocityY(-330);
     }
   });
-  jump.on("pointerup", function(pointer, event) {});
+  jump.on("pointerup", function(pointer, event) {
+    jump.setAlpha(1);
+  });
+  
 }
 
 const gameSizeX = 10000;
@@ -269,10 +291,10 @@ function create() {
   this.socket.on("currentPlayers", players => {
     players.forEach(player => {
       if (player.id === self.socket.id) {
-        addPlayer(self, player, this.cameras);
+        addPlayer(self, player);
+        this.cameras.main.startFollow(container);
       } else {
         addOtherPlayer(self, player);
-        this.cameras.main.startFollow(player);
       }
     });
   });
@@ -376,7 +398,6 @@ function addPlayer(self, thisPlayer, cameras) {
   player = self.add
     .sprite(thisPlayer.x, thisPlayer.y, thisPlayer.playerType)
     .setScale(0.5, 0.5);
-  console.log(player.width, player.height);
   container.setSize(player.width / 2, player.height / 2);
   container.add(player);
   const animal = self.add
@@ -390,6 +411,7 @@ function addPlayer(self, thisPlayer, cameras) {
   self.physics.world.enable(container);
   container.body.setBounce(0.2).setCollideWorldBounds(true);
   self.physics.add.collider(container, platforms);
+  
 }
 
 function onConnect() {}
