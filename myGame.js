@@ -178,7 +178,7 @@ function addControls(self) {
       player.anims.play(`${player.playerType}-left`, true);
     }
   });
-  left.on("pointerout", function(pointer, event) {
+  left.on("pointerup", function(pointer, event) {
     container.body.setVelocityX(0);
     player.anims.play(`${player.playerType}-turn`);
   });
@@ -197,7 +197,7 @@ function addControls(self) {
     }
   });
 
-  right.on("pointerout", function(pointer, event) {
+  right.on("pointerup", function(pointer, event) {
     container.body.setVelocityX(0);
     player.anims.play(`${player.playerType}-turn`);
   });
@@ -213,7 +213,7 @@ function addControls(self) {
       container.body.setVelocityY(-330);
     }
   });
-  jump.on("pointerout", function(pointer, event) {});
+  jump.on("pointerup", function(pointer, event) {});
 }
 
 const gameSizeX = 10000;
