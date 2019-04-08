@@ -79,7 +79,49 @@ console.log(game);
 //game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
 var platforms;
 var player;
+var otherPlayers = {
+  'lobby': {
+    'players' : {
+      'bob': { //Example username to show setup
+        'info': {},
+        'parts' : {
+            'container': '', // Referencing the object container added to game
+            'mask' : '',  // Referencing to the mask object equip added to container (e.g. Penguin)
+            'body' : '', // Referencing to the body object added to container, player model (e.g. Soldier)
+          }
+      }  // players nests ids that each point to an array of 
+    } ,
+    'mapInfo' : {
+    }
+  },
+  // Can nest multi-race to another depth if wanting to add levels
+  'multi-race':  {
+    'players' : {},
+    'mapInfo' : {
+    }
+  },
+  'single-mode': {
+    'player' : {},
+    'mapInfo' : {
+    }
+  }
+};
+
 let touchInput = false;
+
+
+function loadInfo(otherPlayer) {  // Adds to corresponding rooms
+  const {players} = otherPlayers[otherPlayers.room];
+  if (!players.hasOwnProperty(otherPlayer.id)) { //Check if id is part of room
+    players[otherPlayer.id] = {};
+  }
+  let info = {...otherPlayer};
+  let parts = {'container': '', 'mask': '', 'body':''}; // Empty since has not been created in game
+  players[otherPlayer.id].info = info;
+  players[otherPlayer.id].parts = parts;
+}
+
+
 // Gets a platform group an adds more platforma
 const typeOfChars = ["Adventurer", "Female", "Player", "Soldier", "Zombie"];
 
@@ -160,6 +202,11 @@ function createLevel(platforms) {
       "   " +
       platforms.getChildren()[1].body.height
   );
+
+
+  function createLobby(playforms) {
+
+  }
 
   /*
   platforms
@@ -254,7 +301,7 @@ function create() {
   this.input.addPointer(1);
 
   addControls(self);
-  this.otherPlayers = this.physics.add.group();
+  otherPlayers = this.physics.add.group();
 
   platforms = this.physics.add.staticGroup();
   //block = this.physics.add.staticImage(120, 300, 'house').setScale;
@@ -305,14 +352,14 @@ function create() {
   });
 
   this.socket.on("deletePlayer", id => {
-    self.otherPlayers.getChildren().forEach(otherPlayer => {
+    otherPlayers.getChildren().forEach(otherPlayer => {
       if (id === otherPlayer.playerId) {
         otherPlayer.destroy();
       }
     });
   });
   this.socket.on("playerMoved", player => {
-    self.otherPlayers.getChildren().forEach(otherPlayer => {
+    otherPlayers.getChildren().forEach(otherPlayer => {
       if (player.id === otherPlayer.playerId) {
         otherPlayer.setPosition(player.x, player.y);
       }
@@ -347,7 +394,7 @@ function update() {
     if (cursors.space.isDown && container.body.touching.down) {
       container.body.setVelocityY(-330);
     }
-    this.physics.add.collider(this.otherPlayers, platforms);
+    this.physics.add.collider(otherPlayers, platforms);
     // emit player movement
     let x = container.x;
     let y = container.y;
@@ -381,19 +428,38 @@ function addNewPlayer(self, otherPlayer) {
 }
 
 function addOtherPlayer(self, playerInfo) {
+  let playerParts = {
+    'container': '', // Referencing the object container added to game
+    'mask' : '',  // Referencing to the mask object equip added to container (e.g. Penguin)
+    'body' : '', // Referencing to the body object added to container, player model (e.g. Soldier)
+  };
+  
+  let container = self.add.container(thisPlayer.x, thisPlayer.y);
+  otherPlayers.lobby.players.push(container);
+
   const otherPlayer = self.physics.add
     .sprite(playerInfo.x, playerInfo.y, playerInfo.playerType)
     .setScale(0.5, 0.5);
   otherPlayer.setBounce(0.2);
   otherPlayer.setCollideWorldBounds(true);
   otherPlayer.playerId = playerInfo.id;
-  self.otherPlayers.add(otherPlayer);
+  otherPlayers.add(otherPlayer);
 }
 
 var head;
 var container;
 
 function addPlayer(self, thisPlayer, cameras) {
+  let playerParts = {
+    'playerInfo': '',
+    'container': '', // Referencing the object container added to game
+    'mask' : '',  // Referencing to the mask object equip added to container (e.g. Penguin)
+    'body' : '', // Referencing to the body object added to container, player model (e.g. Soldier)
+  };
+  
+  let container = self.add.container(thisPlayer.x, thisPlayer.y);
+  otherPlayers.lobby.players.push(container);
+
   container = self.add.container(thisPlayer.x, thisPlayer.y);
   player = self.add
     .sprite(thisPlayer.x, thisPlayer.y, thisPlayer.playerType)
