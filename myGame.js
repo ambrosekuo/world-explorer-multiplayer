@@ -229,6 +229,8 @@ function create() {
 
   var self = this;
 
+  this.input.addPointer(1);
+
   addControls(self);
   this.otherPlayers = this.physics.add.group();
 
