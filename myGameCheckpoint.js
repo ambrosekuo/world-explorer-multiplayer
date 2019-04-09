@@ -58,7 +58,6 @@ class PlayerInfo {
     this.databaseId = "";
     this.socketId = "";
     this.loggedIn = false;
-    this.facing = 'right';
     this.username = username;
     this.playerType = playerType;
     this.gold = gold;
@@ -105,7 +104,6 @@ console.log(game);
 var platforms;
 var player;
 var playerOffset;
-var oldPlayerPosition;
 var background;
 // Other players in same room
 var otherPlayers = [];
@@ -377,90 +375,66 @@ function create() {
         playerOffset.index--;
       }
       otherPlayers.splice(removingIndex, 1);
-      groupOfOtherPlayers.getChildren()[removingIndex].destroy();
+      groupOfOtherPlayers.getChildren()[removingIndex].destory();
     }
   });
 
-  // Same concept as deletePlayer
-  this.socket.on("playerMoved", movementData => {
-    if (playerOffset.room === movementData.playerOffset.room) {
-      const index = movementData.playerOffset.index;
-      const playerIndex;
-
-      if (playerOffset.index < index) {
-        playerIndex = index-1;
-      }
-      // Have to decremenet offset since missing index now
-      else if (playerOffset > index) {
-        playerIndex = index;
-        playerOffset.index--;
-      }
-      otherPlayers[playerIndex].info.x = movementData.x;
-      otherPlayers[playerIndex].info.y = movementData.y;
-      otherPlayers[playerIndex].info.facing = movementData.facing;
-      groupOfOtherPlayers.getChildren()[playerIndex].setPosition(otherPlayers[playerIndex].info.x,otherPlayers[playerIndex].info.y);
-      // This is a next level update hahahaha
-      otherPlayers[playerIndex].parts.body.anims(`${otherPlayers[playerIndex].info.playerType}-${otherPlayers[playerIndex].info.facing}`);
+  this.socket.on("playerMoved", player => {
+    if (playerOffset.room === data.room) {
+      updateInfo(otherPlayer);
     }
+    
+    otherPlayers.getChildren().forEach(otherPlayer => {
+      if (player.id === otherPlayer.playerId) {
+        otherPlayer.setPosition(player.x, player.y);
+      }
+    });
   });
 }
 
 function update() {
   if (player) {
-    // Fall through floor.
-    if (player.parts.container.y >= mapHeight - player.parts.container.height) {
-      player.info.x = 0;
-      player.info.y = 400;
-      player.parts.container.setPosition(0, 400);
+    if (container.y >= mapHeight - container.height) {
+      container.setPosition(0, 0);
     }
     if (cursors.left.isDown) {
       touchInput = false;
-      player.parts.body.flipX = true;
-      player.parts.container.body.setVelocityX(-160);
-      player.info.facing = 'left';
-      player.parts.body.anims.play(`${player.info.playerType}-left`, true);
+      player.flipX = true;
+      container.body.setVelocityX(-160);
+      player.anims.play(`${player.playerType}-left`, true);
     } else if (cursors.right.isDown) {
       touchInput = false;
-      player.parts.body.flipX = false;
-      player.parts.container.body.setVelocityX(160);
-      player.info.facing = 'right';
-      player.parts.body.anims.play(`${player.info.playerType}-right`, true);
+      player.flipX = false;
+      container.body.setVelocityX(160);
+
+      player.anims.play(`${player.playerType}-right`, true);
     } else {
       if (!touchInput) {
-        player.parts.container.body.setVelocityX(0);
-        player.info.facing = 'turn';
-        player.parts.body.anims.play(`${player.info.playerType}-turn`);
+        container.body.setVelocityX(0);
+        player.anims.play(`${player.playerType}-turn`);
         touchInput = false;
       }
     }
+
     if (cursors.space.isDown && container.body.touching.down) {
-      player.parts.container.body.setVelocityY(-330);
+      container.body.setVelocityY(-330);
     }
-    this.physics.add.collider(groupOfOtherPlayers, platforms);
-
-    // Updating player.info to container.x
-    player.info.x = player.parts.container.x;
-    player.info.y = player.parts.container.y;
-
-    if (oldPlayerPosition == null) {
-      oldPlayerPosition = {
-        x: player.info.x,
-        y: player.info.y,
-        facing : player.info.facing
-      }
+    this.physics.add.collider(otherPlayers, platforms);
+    // emit player movement
+    let x = container.x;
+    let y = container.y;
+    if (container.oldPosition == null) {
+      container.oldPosition = { x: container.x, y: container.y };
     }
-
-    if (player.info.x !== oldPlayerPosition.x ||
-      player.info.y !== oldPlayerPosition.y) {
+    if (x !== container.oldPosition.x) {
       this.socket.emit("playerMovement", {
-        playerOffset: {...playerOffset},
-        x: player.info.x,
-        y: player.info.y,
-        facing: player.info.facing
+        x: container.x,
+        y: container.y
       });
-      oldPlayerPosition.x = player.info.x;
-      oldPlayerPosition.y = player.info.y;
-      oldPlayerPosition.facing = player.info.facing;
+      container.oldPosition = {
+        x: container.x,
+        y: container.y
+      };
     }
     //  Position the center of the camera on the player
     //  We -400 because the camera width is 800px and

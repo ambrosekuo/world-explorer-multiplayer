@@ -35,7 +35,6 @@ class PlayerInfo {
     this.databaseId = '';
     this.socketId = '';
     this.loggedIn = false;
-    this.facing = 'right';
     this.username = username;
     this.playerType = playerType;
     this.gold = gold;
@@ -189,16 +188,21 @@ io.on("connection", function(socket) {
     console.log("Disconnected: %s sockets connected", connections.length);
   });
   socket.on("playerMovement", function(movementData) {
-    const room = movementData.playerOffset.room;
-    const index = movementData.playerOffset.index;
-
-    allPlayers[room]['players'][index].info.x =  movementData.x;
-    allPlayers[room]['players'][index].info.y =  movementData.y;
-    allPlayers[room]['players'][index].info.facing =  movementData.facing;
-    socket.broadcast.emit("playerMoved", movementData);
+    let index = getIndexFromSocketId(players, socket.id);
+    console.log(index);
+    players[index].x = movementData.x;
+    players[index].y = movementData.y;
+    socket.broadcast.emit("playerMoved", players[index]);
   });
 });
 
+function getIndexFromSocketId(players, socketId) {
+  for (let i = 0; i < players.length; i++) {
+    if (socketId == players[i].id) {
+      return i;
+    }
+  }
+}
 
 server.listen(port, function() {
   console.log(`Listening on ${server.address().port}`);

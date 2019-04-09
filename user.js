@@ -7,7 +7,8 @@ var UserSchema = new Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   businessFollowing: { type: Array, reequired: true },
-  gameInfo: {
+  player: {
+    loggedIn: false,
     id: String,
     playerType: String,
     gold: Number,
