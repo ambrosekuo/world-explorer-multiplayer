@@ -276,14 +276,16 @@ function addControls(self) {
 
 //returns room and index in room
 function findPlayer(self, allPlayers) {
+  console.log(allPlayers["lobby"]["players"][0].info.socketId);
+  console.log(self.socket.id);
   allPlayers["lobby"]["players"].forEach((player, index) => {
-    if (player.info.socketId === self.socket.id) {
-      return { room: player.info.room, index: index };
+    if (player.info.socketId == self.socket.id) {
+      playerOffset = { room: player.info.room, index: index };
     }
   });
   allPlayers["multi-race"]["players"].forEach((player, index) => {
-    if (player.info.socketId === self.socket.id) {
-      return { room: player.info.room, index: index };
+    if (player.info.socketId == self.socket.id) {
+      playerOffset = { room: player.info.room, index: index };
     }
   });
 }
@@ -333,17 +335,16 @@ function create() {
 
   this.socket = io();
 
-  this.socket.emit("senderUserInfo", {
-    user: JSON.stringify(window.localStorage.getItem("user"))
-  });
+  
+  this.socket.emit("sendUserInfo", JSON.parse(window.localStorage.getItem("user")));
   //Don't really have to update other values besides current room....
 
   this.socket.on("currentPlayers", allPlayers => {
-    playerOffset = { ...findPlayer(self, allPlayers) };
-
+    findPlayer(self, allPlayers);
+    console.log(playerOffset);
     allPlayers[playerOffset.room]["players"].forEach(player => {
       if (player.info.socketId === self.socket.id) {
-        createLevel(self, player.Offsert.room, platforms);
+        createLevel(self, playerOffset.room, platforms);
         addPlayer(self, player);
         this.cameras.main.startFollow(player.parts.container);
       } else {
@@ -358,7 +359,7 @@ function create() {
 
   this.socket.on("deletePlayer", data => {
     if (playerOffset.room === data.room) {
-      const removingIndex;
+      let removingIndex;
       
       // Adjust data.index by offset since otherPlayers array does not include player itself
       /* E.g. 
@@ -385,7 +386,7 @@ function create() {
   this.socket.on("playerMoved", movementData => {
     if (playerOffset.room === movementData.playerOffset.room) {
       const index = movementData.playerOffset.index;
-      const playerIndex;
+      let playerIndex;
 
       if (playerOffset.index < index) {
         playerIndex = index-1;

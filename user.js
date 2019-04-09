@@ -8,8 +8,11 @@ var UserSchema = new Schema({
   password: { type: String, required: true },
   businessFollowing: { type: Array, reequired: true },
   player: {
-    loggedIn: false,
-    id: String,
+    databaseId: String,
+    socketId: String,
+    loggedIn: Boolean,
+    facing: String,
+    username: String,
     playerType: String,
     gold: Number,
     equips: {

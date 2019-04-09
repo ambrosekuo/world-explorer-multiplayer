@@ -1,0 +1,29 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Login</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <script src="/socket.io/socket.io.js"> </script>
+    <link href="login.css" type="text/css"> 
+</head>
+<body id="Game">
+    <form action="/login" method="post">
+        <label for="username">Username:</label>
+        <input id="user" type='text' name="username">
+
+        <label for="password">Password:</label>
+        <input id="password" type='text' name="password">
+        <input type="submit" value="OK">
+    </form>
+
+<button onclick="login(); return false;"> Ghetto Login </button>
+
+<script>
+    function login() {
+        window.localStorage.username = document.getElementById('user').value;
+        window.localStorage.password = document.getElementById('password').value;
+    }
+</script>
+</body>
+</html>
