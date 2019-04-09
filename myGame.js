@@ -36,9 +36,9 @@ class Player {
     this.username = playerInfo.username;
     this.info = { ...playerInfo };
     this.parts = {
-      container: "",
-      mask: "",
-      body: ""
+      container: {},
+      mask: {},
+      body: {}
     };
   }
 }
@@ -114,19 +114,6 @@ var groupOfOtherPlayers; //Otherplayers in same room, stores an array of contain
 
 let touchInput = false;
 
-function loadInfo(otherPlayer) {
-  // Adds to corresponding rooms
-  const { players } = otherPlayers[otherPlayers.room];
-  if (!players.hasOwnProperty(otherPlayer.id)) {
-    //Check if id is part of room
-    players[otherPlayer.id] = {};
-  }
-  let info = { ...otherPlayer };
-  let parts = { container: "", mask: "", body: "" }; // Empty since has not been created in game
-  players[otherPlayer.id].info = info;
-  players[otherPlayer.id].parts = parts;
-}
-
 // Gets a platform group an adds more platforma
 const typeOfChars = ["Adventurer", "Female", "Player", "Soldier", "Zombie"];
 
@@ -191,10 +178,10 @@ function createBlocks(platforms) {
 }
 
 function createLevel(self, type, platforms) {
-  if (tpe == "lobby") {
+  if (type == "lobby") {
     background = self.add.tileSprite(0, 0, 10000, 800, "grass");
     platforms
-      .create(400, 400, "ground")
+      .create(400, 300, "ground")
       .setScale(100, 1)
       .refreshBody();
   } else if (type == "multi-race") {
@@ -276,8 +263,6 @@ function addControls(self) {
 
 //returns room and index in room
 function findPlayer(self, allPlayers) {
-  console.log(allPlayers["lobby"]["players"][0].info.socketId);
-  console.log(self.socket.id);
   allPlayers["lobby"]["players"].forEach((player, index) => {
     if (player.info.socketId == self.socket.id) {
       playerOffset = { room: player.info.room, index: index };
@@ -340,6 +325,7 @@ function create() {
   //Don't really have to update other values besides current room....
 
   this.socket.on("currentPlayers", allPlayers => {
+    console.log(allPlayers);
     findPlayer(self, allPlayers);
     console.log(playerOffset);
     allPlayers[playerOffset.room]["players"].forEach(player => {
@@ -348,6 +334,7 @@ function create() {
         addPlayer(self, player);
         this.cameras.main.startFollow(player.parts.container);
       } else {
+        console.log("Addding other player");
         addOtherPlayer(self, player);
       }
     });
@@ -385,34 +372,38 @@ function create() {
   // Same concept as deletePlayer
   this.socket.on("playerMoved", movementData => {
     if (playerOffset.room === movementData.playerOffset.room) {
+      console.log(playerOffset.index);
+      console.log(movementData.playerOffset.index);
       const index = movementData.playerOffset.index;
       let playerIndex;
-
       if (playerOffset.index < index) {
+        console.log('lower');
         playerIndex = index-1;
       }
-      // Have to decremenet offset since missing index now
       else if (playerOffset > index) {
+        console.log('higher');
         playerIndex = index;
-        playerOffset.index--;
       }
+      console.log(otherPlayers);
       otherPlayers[playerIndex].info.x = movementData.x;
       otherPlayers[playerIndex].info.y = movementData.y;
       otherPlayers[playerIndex].info.facing = movementData.facing;
       groupOfOtherPlayers.getChildren()[playerIndex].setPosition(otherPlayers[playerIndex].info.x,otherPlayers[playerIndex].info.y);
       // This is a next level update hahahaha
-      otherPlayers[playerIndex].parts.body.anims(`${otherPlayers[playerIndex].info.playerType}-${otherPlayers[playerIndex].info.facing}`);
+      otherPlayers[playerIndex].parts.body.anims.play(`${otherPlayers[playerIndex].info.playerType}-${otherPlayers[playerIndex].info.facing}`);
     }
   });
+  
 }
 
 function update() {
   if (player) {
-    // Fall through floor.
-    if (player.parts.container.y >= mapHeight - player.parts.container.height) {
+    // This physics only in multi-race.
+    if (player.info.room == 'multi-race' && 
+    player.parts.container.y >= mapHeight - player.parts.container.height) {
       player.info.x = 0;
-      player.info.y = 400;
-      player.parts.container.setPosition(0, 400);
+      player.info.y = 0;
+      player.parts.container.setPosition(0, 0);
     }
     if (cursors.left.isDown) {
       touchInput = false;
@@ -434,7 +425,7 @@ function update() {
         touchInput = false;
       }
     }
-    if (cursors.space.isDown && container.body.touching.down) {
+    if (cursors.space.isDown && player.parts.container.body.touching.down) {
       player.parts.container.body.setVelocityY(-330);
     }
     this.physics.add.collider(groupOfOtherPlayers, platforms);
@@ -467,7 +458,7 @@ function update() {
     //  We -400 because the camera width is 800px and
     //  we want the center of the camera on the player, not the left-hand side of it
 
-    this.cameras.main.scrollX = container.x - 400;
+    this.cameras.main.scrollX = player.parts.container.x - 400;
   }
 }
 
@@ -502,24 +493,29 @@ function addOtherPlayer(self, player) {
 
   self.physics.world.enable(otherPlayer.parts.container);
   otherPlayer.parts.container.body.setBounce(0.2).setCollideWorldBounds(true);
+  otherPlayers.push(otherPlayer);
+  console.log(otherPlayers);
   groupOfOtherPlayers.add(otherPlayer.parts.container);
 }
 
 function addPlayer(self, thisPlayer, cameras) {
   player = { ...thisPlayer };
-
+  console.log(player.info);
+  
   player.parts.container = self.add.container(player.info.x, player.info.y);
 
   player.parts.body = self.add
     .sprite(player.info.x, player.info.y, player.info.playerType)
     .setScale(0.5, 0.5);
+    
   player.parts.container.setSize(
     player.parts.body.width / 2,
     player.parts.body.width / 2
   );
+  player.parts.body.setDepth(1);
   player.parts.container.add(player.parts.body);
   player.parts.mask = self.add
-    .sprite(player.info.x, player.info.y, player.info.equips.mask)
+    .sprite(player.info.x, player.info.y, 'player.info.equips.mask')
     .setScale(0.2, 0.2);
   player.parts.container.add(player.parts.mask);
 

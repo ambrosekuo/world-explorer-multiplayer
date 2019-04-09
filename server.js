@@ -22,9 +22,9 @@ class Player {
     this.username = playerInfo.username;
     this.info = { ...playerInfo };
     this.parts = {
-      container: "",
-      mask: "",
-      body: ""
+      container: {},
+      mask: {},
+      body: {}
     };
   }
 }
@@ -112,7 +112,7 @@ function createDefaultPlayer(username) {
   return new PlayerInfo(
     username,
     0,
-    300,
+    0,
     "Female",
     gold,
     equips,
@@ -213,7 +213,7 @@ io.on("connection", function(socket) {
             break;
           }
         }
-        players.splice(connections.indexOf(socket, 1));
+        allPlayers.splice(connections.indexOf(socket, 1));
         console.log("Disconnected: %s sockets connected", connections.length);
       });
       socket.on("playerMovement", function(movementData) {
