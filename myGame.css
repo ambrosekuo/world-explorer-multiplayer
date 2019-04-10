@@ -1,18 +1,100 @@
 body {
-  
+  background: lightsteelblue;
   margin: 0;
   overflow: hidden;
-  background-color: black;
+}
+span {
+  font-weight: 600;
+}
+
+#grid-container {
+  background: lightcoral;
+  display:block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 80%;
+  height: 90vh;
+  border: 1px  black solid;
+
+  border-radius: 5px;
+  box-shadow: 0 20px 20px 0 rgba(0, 0, 0, 0.26);
+  background: lightblue;
+  padding: 0.5vw;
+
+  justify-items: center;
+  align-items: center;
+  overflow:scroll;
+}
+
+h1 {
+  padding-left: 4vw;
+  padding-top: 2vw;
+  margin: 0;
+  background: lightblue;
+}
+h2 {
+  padding: 0;
+  margin: 0;
+}
+
+#accountInfo {
+  margin: 1px;
+  float: right;
+  width: 20vw;
+  text-align: center;
+  display: block;
+  border: 1px  black solid;
+  border: 0.1vw rgb(17, 15, 15) solid;
+  border-radius: 5px;
+  box-shadow: 0 20px 20px 0 rgba(0, 0, 0, 0.26);
+  background: lightblue;
+
+  
+}
+
+button {
+  margin: 0 auto;
 }
 
 #Game {
-  margin: 0 auto;
-  display: flex;
+  float: left;
+  border: 1px  black solid;
+  padding: 0;
+    
+}
+
+h2 {
+  padding: none;
+  margin: none;
+}
+
+#stats {
+  font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+  background: rgba(206, 202, 202, 0.836);
+  margin-top: 12vh;
+  padding: 1px;
+  width: 70%;
+  height: 5vh;
+  border: 4px rgb(129, 125, 125) solid;
+  display: inline-block;
   flex-direction: column;
   justify-content: center;
+  border: 0.1vw rgb(185, 182, 182) solid;
+  border-radius: 5px;
+  box-shadow: 5px 5px 30px 15px rgba(0, 0, 0, 0.26);
+}
+
+.tab {
+  background: rgba(219, 215, 215, 0.836);
+  font-size: 20px;
+  height: 100%;
+  float:right;
+  width: 10%;
+  padding-right: 30px;
+  border-left: 1px solid black ;
 }
 
 canvas {
-  width: 50%;
-  height: 100%;
+  width: 90%;
+  height: 60vh;
 }

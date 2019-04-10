@@ -31,6 +31,8 @@ const animalArray = [
   "zebra.png"
 ];
 
+var allRooms = ["lobby", "multi-race"];
+
 class Player {
   constructor(playerInfo) {
     this.username = playerInfo.username;
@@ -90,18 +92,21 @@ var config = {
     preload: preload,
     create: create,
     update: update
-  }
+  },
+  parent: 'grid-container'
 };
 
 function logOut() {
   fetch("/logOut", {
     method: "POST",
     redirect: "follow",
-    body: {
-      username: player.username
-    }
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: player.username,
+      socketId: socket.id
+    })
   }).then(res => {
-    window.localStorage.removeItem('user');
+    window.localStorage.removeItem("user");
     window.location.replace(res.url);
   });
 }
@@ -122,6 +127,8 @@ var oldPlayerPosition;
 var background;
 // Other players in same room
 var otherPlayers = [];
+
+var socket = io();
 
 var groupOfOtherPlayers; //Otherplayers in same room, stores an array of containers as a group.
 
@@ -223,16 +230,16 @@ function addControls(self) {
     left.setAlpha(0.5);
     if (player != null) {
       touchInput = true;
-      player.flipX = true;
-      container.body.setVelocityX(-160);
-      player.anims.play(`${player.playerType}-left`, true);
+      player.parts.body.flipX = true;
+      player.parts.container.body.setVelocityX(-160);
+      player.parts.body.anims.play(`${player.info.playerType}-left`, true);
     }
   });
 
   left.on("pointerup", function(pointer, event) {
     left.setAlpha(1);
-    container.body.setVelocityX(0);
-    player.anims.play(`${player.playerType}-turn`);
+    player.parts.container.body.setVelocityX(0);
+    player.parts.body.anims.play(`${(player.info, playerType)}-turn`);
   });
 
   right = self.add
@@ -244,16 +251,16 @@ function addControls(self) {
     if (player != null) {
       right.setAlpha(0.5);
       touchInput = true;
-      player.flipX = false;
-      container.body.setVelocityX(160);
-      player.anims.play(`${player.playerType}-right`, true);
+      player.parts.body.flipX = false;
+      player.parts.container.body.setVelocityX(160);
+      player.parts.body.anims.play(`${player.info.playerType}-right`, true);
     }
   });
 
   right.on("pointerup", function(pointer, event) {
     right.setAlpha(1);
-    container.body.setVelocityX(0);
-    player.anims.play(`${player.playerType}-turn`);
+    player.parts.container.body.setVelocityX(0);
+    player.parts.body.anims.play(`${player.info.playerType}-turn`);
   });
 
   jump = self.add
@@ -264,9 +271,9 @@ function addControls(self) {
   jump.setInteractive();
   jump.on("pointerdown", function(pointer, localX, localY, event) {
     jump.setAlpha(0.5);
-    if (player != null && container.body.touching.down) {
+    if (player != null && player.parts.container.body.touching.down) {
       touchInput = true;
-      container.body.setVelocityY(-330);
+      player.parts.container.body.setVelocityY(-330);
     }
   });
   jump.on("pointerup", function(pointer, event) {
@@ -275,24 +282,36 @@ function addControls(self) {
 }
 
 //returns room and index in room
-function findPlayer(self, allPlayers) {
-  allPlayers["lobby"]["players"].forEach((player, index) => {
-    console.log(player.info.socketId + "   " + self.socket.id);
-    if (player.info.socketId == self.socket.id) {
-      playerOffset = { room: player.info.room, index: index };
+function findPlayerRoom(allPlayers) {
+  for (let i = 0; i < allRooms.length; i++) {
+    for (let j = 0; j < allPlayers[allRooms[i]]["players"].length; j++) {
+      if (allPlayers[allRooms[i]]["players"][j].info.socketId == socket.id) {
+        return allRooms[i];
+      }
     }
-  });
-  allPlayers["multi-race"]["players"].forEach((player, index) => {
-    if (player.info.socketId == self.socket.id) {
-      playerOffset = { room: player.info.room, index: index };
-    }
-  });
+  }
 }
+
+function createInterface() {
+  var quantitybar = new uiWidgets.QuantityBar(
+    game,
+    {"x": 50, "y": 10},
+    {"startValue": 50, maxValue: 100},
+    false,
+    false,
+    trackImage,
+    barImage,
+    {'duration': 400, 'ease': Phaser.Easing.Quadratic.Out}
+);
+}
+
 
 const gameSizeX = 10000;
 const gameSizeY = 1100;
 
 function create() {
+  document.getElementById("username").innerHTML = "   " + JSON.parse(window.localStorage.getItem('user')).username;
+  //createInterface();
   //this.cameras.main.setBounds(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
   this.cameras.main.setBounds(0, 0, 4000, 400);
 
@@ -332,90 +351,60 @@ function create() {
 
   cursors = this.input.keyboard.createCursorKeys();
 
-  this.socket = io();
+  socket.emit("sendUserInfo", JSON.parse(window.localStorage.getItem("user")));
+  //Don't really have to update other values befindPlasides current room....
 
-  this.socket.emit(
-    "sendUserInfo",
-    JSON.parse(window.localStorage.getItem("user"))
-  );
-  //Don't really have to update other values besides current room....
+  socket.on("currentPlayers", allPlayers => {
+    // Need to find room first to find player
+    const playerRoom = findPlayerRoom(allPlayers);
+    createLevel(self, playerRoom, platforms);
 
-  this.socket.on("currentPlayers", allPlayers => {
-    console.log(allPlayers);
-    findPlayer(self, allPlayers);
-    console.log(playerOffset);
-    allPlayers[playerOffset.room]["players"].forEach(player => {
-      if (player.info.socketId === self.socket.id) {
-        createLevel(self, playerOffset.room, platforms);
-        addPlayer(self, player);
-        this.cameras.main.startFollow(player.parts.container);
+    for (let i = 0; i < allPlayers[playerRoom]["players"].length; i++) {
+      if (allPlayers[playerRoom]["players"][i].info.socketId == socket.id) {    
+        addPlayer(self, allPlayers[playerRoom]["players"][i]);
       } else {
-        console.log("Addding other player");
-        addOtherPlayer(self, player);
+        addOtherPlayer(self, allPlayers[playerRoom]["players"][i]);
       }
-    });
+    }
   });
 
-  this.socket.on("newPlayer", newPlayer => {
+  socket.on("newPlayer", newPlayer => {
+    console.log(newPlayer);
     addNewPlayer(self, newPlayer);
   });
 
-  this.socket.on("deletePlayer", data => {
-    console.log("DELETINGGGGG");
-    if (playerOffset.room === data.room) {
-      let removingIndex;
-
-      // Adjust data.index by offset since otherPlayers array does not include player itself
-      /* E.g. 
-      1, 2, 3 in allPlayers
-      1, 3 in otherPlayers,
-      want to remove 3 in allPlayers, so index 2, have to -1 since we took player 2 out
-      and playerOffset = index 1 <index 2. Now at just 1, playerOffset does not change
-      */
-      // Indexes never be equal since socket is gone/page is closed
-      if (playerOffset.index < data.index) {
-        removingIndex = data.index - 1;
+  socket.on("deletePlayer", data => {
+    console.log('bye');
+    if (player.info.room == data.room) {
+      for (let i = 0; i < otherPlayers.length; i++) {
+        if (data.socketId == otherPlayers[i].info.socketId) {
+          groupOfOtherPlayers.getChildren[i].destroy();
+          otherPlayers.splice(index, 1);
+          break;
+        }
       }
-      // Have to decremenet offset since missing index now
-      else if (playerOffset > data.index) {
-        removingIndex = data.index;
-        playerOffset.index--;
-      }
-      otherPlayers.splice(removingIndex, 1);
-      groupOfOtherPlayers.getChildren()[removingIndex].destroy();
     }
   });
 
   // Same concept as deletePlayer
-  this.socket.on("playerMoved", movementData => {
-    if (playerOffset.room === movementData.playerOffset.room) {
-      console.log(playerOffset.index);
-      console.log(movementData.playerOffset.index);
-      const index = movementData.playerOffset.index;
-      let playerIndex;
-      if (playerOffset.index < index) {
-        console.log("lower");
-        playerIndex = index - 1;
-      } else if (playerOffset > index) {
-        console.log("higher");
-        playerIndex = index;
+  socket.on("playerMoved", otherPlayer => {
+    if (player.info.room == otherPlayer.info.room) {
+      for (let i = 0; i < otherPlayers.length; i++) {
+        if (otherPlayer.info.socketId == otherPlayers[i].info.socketId) {
+          //console.log(groupOfOtherPlayers.getChildren());
+          otherPlayers[i].info.x = otherPlayer.info.x;
+          otherPlayers[i].info.y = otherPlayer.info.y;
+          otherPlayers[i].info.facing = otherPlayer.info.facing;
+          groupOfOtherPlayers
+            .getChildren()
+            [i].setPosition(otherPlayers[i].info.x, otherPlayers[i].info.y);
+
+          // This is a next level update hahahaha
+          otherPlayers[i].parts.body.anims.play(
+            `${otherPlayers[i].info.playerType}-${otherPlayers[i].info.facing}`
+          );
+        }
       }
-      console.log(otherPlayers);
-      otherPlayers[playerIndex].info.x = movementData.x;
-      otherPlayers[playerIndex].info.y = movementData.y;
-      otherPlayers[playerIndex].info.facing = movementData.facing;
-      groupOfOtherPlayers
-        .getChildren()
-        [playerIndex].setPosition(
-          otherPlayers[playerIndex].info.x,
-          otherPlayers[playerIndex].info.y
-        );
-      // This is a next level update hahahaha
-      otherPlayers[playerIndex].parts.body.anims.play(
-        `${otherPlayers[playerIndex].info.playerType}-${
-          otherPlayers[playerIndex].info.facing
-        }`
-      );
     }
   });
 }
@@ -472,12 +461,7 @@ function update() {
       player.info.x !== oldPlayerPosition.x ||
       player.info.y !== oldPlayerPosition.y
     ) {
-      this.socket.emit("playerMovement", {
-        playerOffset: { ...playerOffset },
-        x: player.info.x,
-        y: player.info.y,
-        facing: player.info.facing
-      });
+      socket.emit("playerMovement", player);
       oldPlayerPosition.x = player.info.x;
       oldPlayerPosition.y = player.info.y;
       oldPlayerPosition.facing = player.info.facing;
@@ -494,9 +478,11 @@ function addNewPlayer(self, otherPlayer) {
   addOtherPlayer(self, otherPlayer);
 }
 
-function addOtherPlayer(self, player) {
-  otherPlayer = { ...player };
+function addOtherPlayer(self, thisplayer) {
+  console.log(thisplayer.info.y);
+  otherPlayer = {...thisplayer};
 
+  //otherPlayers.parts = {};
   otherPlayer.parts.container = self.add.container(
     otherPlayer.info.x,
     otherPlayer.info.y
@@ -510,6 +496,7 @@ function addOtherPlayer(self, player) {
     otherPlayer.parts.body.width / 2
   );
   otherPlayer.parts.container.add(otherPlayer.parts.body);
+  otherPlayer.info.equips.mask = 'penguin';
   if (otherPlayer.info.equips.mask != "none") {
     otherPlayer.parts.mask = self.add
       .sprite(
@@ -525,7 +512,10 @@ function addOtherPlayer(self, player) {
   otherPlayer.parts.container.body.setBounce(0.2).setCollideWorldBounds(true);
   otherPlayers.push(otherPlayer);
   console.log(otherPlayers);
+  console.log(player);
   groupOfOtherPlayers.add(otherPlayer.parts.container);
+  console.log(groupOfOtherPlayers.getChildren());
+  groupOfOtherPlayers.setDepth(1);
 }
 
 function addPlayer(self, thisPlayer, cameras) {
@@ -537,6 +527,7 @@ function addPlayer(self, thisPlayer, cameras) {
   player.parts.body = self.add
     .sprite(player.info.x, player.info.y, player.info.playerType)
     .setScale(0.5, 0.5);
+
 
   player.parts.container.setSize(
     player.parts.body.width / 2,

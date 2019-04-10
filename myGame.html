@@ -1,17 +1,33 @@
-<!doctype html> 
-<html lang="en"> 
-<head> 
+<!DOCTYPE html>
+<html lang="en">
+  <head>
     <meta charset="UTF-8" />
     <title>legends of league</title>
     <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
-    <script src="/socket.io/socket.io.js"> </script>
-    <link href="myGame.css" type="text/css"> 
-</head>
-<body id="Game">
-    <h1> World-Explorer <h1>
-        <h2> Account</h2>
-        <button onclick="logOut(); return false;"> LOG OUT</button> 
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="lib/phaser-ui-tools.min.js"></script>
+    <link rel="stylesheet" href="myGame.css" type="text/css" />
 
-<script src="myGame.js" type="text/javascript" defer> </script>
-</body>
+    <script src="myGame.js" type="text/javascript" defer></script>
+  </head>
+  <body>
+    <div id="grid-container">
+      <head id="header">
+        <h1>World-Explorer</h1>
+      </head>
+      <div id="accountInfo">
+        <h2>Account</h2>
+        <br />
+        Logged in As<span id="username"> </span>
+        <button onclick="logOut(); return false;">LOG OUT</button>
+      </div>
+      <div id="stats">
+        <div class="tab">Gold: <span id="goldVal"></span></div>
+        <div class="tab">Exp: <span id="exp"></span></div>
+        <div class="tab">Level: <span id="level"></span></div>
+        <div id="expBar"></div>
+      </div>
+      <div id="Game"></div>
+    </div>
+  </body>
 </html>

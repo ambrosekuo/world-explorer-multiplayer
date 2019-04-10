@@ -8,7 +8,6 @@ var mongoose = require("mongoose").set("debug", true);
 var db = mongoose.connection;
 var bodyParser = require("body-parser");
 var User = require("./user");
-var bcrypt = require("bcrypt");
 
 // Current worlds: 'lobby', 'mutli-race', 'single-mode'
 //add levels at the end
@@ -107,16 +106,41 @@ app.post("/loggedIn", (req, res) => {
   User.findOne({ username: req.body.username })
     .select("player username password")
     .exec(function(err, user) {
-      if (user.player.loggedIn) {
-        res.json({ success: false, message: "Already Logged in" });
-      } else {
-        res.redirect("myGame");
+      if (user) {
+        if (user.player.loggedIn) {
+          res.json({ success: false, message: "Already Logged in" });
+        } else {
+          res.redirect("myGame");
+        }
       }
     });
 });
 
 app.post("/logOut", (req, res) => {
-  // Disconnect socket emitter should handle the removal of allPlayers/update database.
+  let room = newPlayer.info.room;
+  let deleteInfo = {};
+  for (let i = 0; i < allPlayers[room]["players"].length; i++) {
+    if (socket.id == allPlayers[room]["players"][i].info.socketId) {
+      deleteInfo = {
+        socketId: socket.id,
+        room: room,
+        index: i
+      };
+    }
+    io.emit("deletePlayer", deleteInfo);
+    allPlayers[room]["players"].splice(deleteInfo.i, 1);
+  }
+  User.updateMany(
+    { username: req.body.username },
+    {
+      $set: {
+        "player.socketId": "",
+        "player.loggedIn": "false"
+      }
+    }
+  ).exec();
+  // Disconnect socket emitter should handle the removal of allPlayers/update database.logi
+
   res.redirect("/login");
 });
 
@@ -124,13 +148,16 @@ app.post("/login", (req, res) => {
   User.findOne({ username: req.body.username })
     .select("player username password")
     .exec(function(err, user) {
+      console.log(req.body);
       if (err) throw err;
       if (!user) {
         res.json({ success: false, message: "Could not Authenticate User" });
       } else if (user) {
         if (req.body.password) {
-          let validPasword = user.comparePassword(req.body.password);
-          if (!validPasword) {
+          let validPassword = user.comparePassword(req.body.password);
+          console.log(user.password + "  " + req.body.password);
+          console.log(validPassword);
+          if (!validPassword) {
             res.json({
               success: false,
               message: "Could not validate Password"
@@ -170,7 +197,7 @@ app.post("/register", (req, res) => {
     user.save(function(err) {
       if (err) {
         console.log(err);
-        res.json({ success: false, message: "User name already exitst" });
+        res.json({ success: false, message: "User name already exist" });
       } else {
         res.json({ success: true, message: "User registered" });
       }
@@ -210,7 +237,7 @@ io.on("connection", function(socket) {
           .exec(function(err, user) {
             newPlayer = new Player(user.player);
             allPlayers[newPlayer.info.room].players.push(newPlayer);
-            console.log(allPlayers);
+            console.log(allPlayers[newPlayer.info.room].players);
             socket.emit("currentPlayers", allPlayers);
 
             //Just have to change step by step now
@@ -231,24 +258,30 @@ io.on("connection", function(socket) {
                 allPlayers[room]["players"].splice(deleteInfo.i, 1);
               }
 
-              User.findOne(
+              User.updateMany(
                 { username: userInfo["username"] },
-                async (err, doc) => {
-                  doc.player.socketId = "";
-                  doc.player.loggedIn = "false";
-                  await doc.save();
+                {
+                  $set: {
+                    "player.socketId": "",
+                    "player.loggedIn": "false"
+                  }
                 }
-              ).then(data => {});
+              ).exec();
             });
-            socket.on("playerMovement", function(movementData) {
-              const room = movementData.playerOffset.room;
-              const index = movementData.playerOffset.index;
-
-              allPlayers[room]["players"][index].info.x = movementData.x;
-              allPlayers[room]["players"][index].info.y = movementData.y;
-              allPlayers[room]["players"][index].info.facing =
-                movementData.facing;
-              socket.broadcast.emit("playerMoved", movementData);
+            socket.on("playerMovement", function(player) {
+              const room = player.info.room;
+              for (let i = 0; i < allPlayers[room]["players"].length; i++) {
+                if (
+                  allPlayers[room]["players"][i].info.socketId ==
+                  player.info.socketId
+                ) {
+                  allPlayers[room]["players"][i].info.x = player.info.x;
+                  allPlayers[room]["players"][i].info.y = player.info.y;
+                  allPlayers[room]["players"][i].info.facing =
+                    player.info.facing;
+                }
+              }
+              socket.broadcast.emit("playerMoved", player);
             });
           });
       });
