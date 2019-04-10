@@ -32,6 +32,7 @@ class Player {
 class PlayerInfo {
   constructor(
     username,
+    password,
     startX,
     startY,
     playerType,
@@ -127,7 +128,7 @@ app.post("/logOut", (req, res) => {
         index: i
       };
     }
-    io.emit("deletePlayer", deleteInfo);
+    socket.broadcast.emit("deletePlayer", deleteInfo);
     allPlayers[room]["players"].splice(deleteInfo.i, 1);
   }
   User.updateMany(
@@ -181,8 +182,9 @@ app.post("/login", (req, res) => {
 app.post("/register", (req, res) => {
   var user = new User();
   user.username = req.body.username;
-  user.password = req.body.password;
-  user.player = { ...createDefaultPlayer(req.body.username) };
+  user.player = {
+    ...createDefaultPlayer(req.body.username, req.body.password)
+  };
   if (
     req.body.username == null ||
     req.body.username == "" ||
@@ -210,6 +212,26 @@ app.get("/game", function(req, res) {
   res.sendFile(__dirname + "/myGame.html");
 });
 
+// Lazy way of updating, deleting whole thing and adding info all over again.
+function updateDatabase(player) {
+  User.findOne({ username: player.username })
+    .select("player username password")
+    .exec(function(err, user) {
+      user.info.room = player.info.room;
+    });
+}
+
+function updateAllPlayers(player) {
+  for (let i = 0; i < allPlayers[player.info.room]["players"].length; i++) {
+    if (
+      allPlayers[player.info.room]["players"][i].username == player.username
+    ) {
+      allPlayers[player.info.room]["players"][i].info == { ...player.info };
+    }
+    break;
+  }
+}
+
 // Reminder
 // Have session info and can access database via User schema
 io.on("connection", function(socket) {
@@ -222,6 +244,20 @@ io.on("connection", function(socket) {
 
   let userInfo;
   let newPlayer;
+
+  socket.on("changeRoom", playerWithOldRoom => {
+    console.log(
+      playerWithOldRoom.oldRoom + "   " + playerWithOldRoom.info.room
+    );
+    //delete playerWithOldRoom.oldRoom;
+    updateDatabase(playerWithOldRoom);
+    updateAllPlayers(playerWithOldRoom);
+    socket.broadcast.emit("deletePlayer", {
+      socketId: playerWithOldRoom.socketId,
+      room: playerWithOldRoom.oldRoom
+    });
+    socket.emit("currentPlayers", allPlayers);
+  });
 
   // Gets user info from game's localstorage being emitted in myGame.js
   //   then updates the database's user with socket.id to connect the html page to info

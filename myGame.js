@@ -93,7 +93,7 @@ var config = {
     create: create,
     update: update
   },
-  parent: 'grid-container'
+  parent: "grid-container"
 };
 
 function logOut() {
@@ -110,6 +110,31 @@ function logOut() {
     window.location.replace(res.url);
   });
 }
+
+function changeEquip() {
+  const cost = 10;
+  if (player) {
+    if (player.info.gold > cost) {
+      const randomAnimalPng = animalArray[Math.floor(Math.random() * (animalArray.length - 1))];
+      player.info.equips.mask = randomAnimalPng.substring(0, randomAnimalPng.indexOf('.'));
+      player.info.gold -= cost;
+      console.log(player.info.equips.mask);
+      player.parts.mask.setTexture(player.info.equips.mask);
+      player.parts.mask.visible = true;
+      updateHtmlValues();
+    }
+  }
+}
+
+function enterRace() {
+  const oldRoom = player.info.room;
+  player.info.room = 'multi-race';
+  otherPlayers = [];
+  groupOfOtherPlayers  = [];
+  socket.emit("changeRoom", {...player, oldRoom: oldRoom});
+}
+
+let makeNewMask = false;
 
 function loadMainMap() {}
 
@@ -295,22 +320,34 @@ function findPlayerRoom(allPlayers) {
 function createInterface() {
   var quantitybar = new uiWidgets.QuantityBar(
     game,
-    {"x": 50, "y": 10},
-    {"startValue": 50, maxValue: 100},
+    { x: 50, y: 10 },
+    { startValue: 50, maxValue: 100 },
     false,
     false,
     trackImage,
     barImage,
-    {'duration': 400, 'ease': Phaser.Easing.Quadratic.Out}
-);
+    { duration: 400, ease: Phaser.Easing.Quadratic.Out }
+  );
 }
-
 
 const gameSizeX = 10000;
 const gameSizeY = 1100;
 
+function updateHtmlValues() {
+  document.getElementById("level").innerHTML = player.info.level;
+  document.getElementById("exp").innerHTML = player.info.experience;
+
+  document.getElementById("gold").innerHTML = player.info.gold;
+}
+
+var selfself;
+
 function create() {
-  document.getElementById("username").innerHTML = "   " + JSON.parse(window.localStorage.getItem('user')).username;
+  //loadHtmlValues();
+
+  document.getElementById("username").innerHTML =
+    "   " + JSON.parse(window.localStorage.getItem("user")).username;
+
   //createInterface();
   //this.cameras.main.setBounds(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
   this.cameras.main.setBounds(0, 0, 4000, 400);
@@ -318,6 +355,7 @@ function create() {
   this.cameras.main.setZoom(1);
 
   var self = this;
+  selfself = this;
 
   this.input.addPointer(1);
 
@@ -357,11 +395,13 @@ function create() {
   socket.on("currentPlayers", allPlayers => {
     // Need to find room first to find player
     const playerRoom = findPlayerRoom(allPlayers);
+    console.log(playerRoom);
     createLevel(self, playerRoom, platforms);
 
     for (let i = 0; i < allPlayers[playerRoom]["players"].length; i++) {
-      if (allPlayers[playerRoom]["players"][i].info.socketId == socket.id) {    
+      if (allPlayers[playerRoom]["players"][i].info.socketId == socket.id) {
         addPlayer(self, allPlayers[playerRoom]["players"][i]);
+        updateHtmlValues();
       } else {
         addOtherPlayer(self, allPlayers[playerRoom]["players"][i]);
       }
@@ -374,7 +414,7 @@ function create() {
   });
 
   socket.on("deletePlayer", data => {
-    console.log('bye');
+    console.log("bye");
     if (player.info.room == data.room) {
       for (let i = 0; i < otherPlayers.length; i++) {
         if (data.socketId == otherPlayers[i].info.socketId) {
@@ -409,8 +449,20 @@ function create() {
   });
 }
 
+let arbTime = 0; //arbitrary time
 function update() {
   if (player) {
+    if (arbTime % 100 == 0) {
+      player.info.experience++;
+      document.getElementById("exp").innerHTML = player.info.experience;
+      if (player.info.experience == 100) {
+        player.info.level++;
+        document.getElementById("level").innerHTML = player.info.level;
+        player.info.experience = 0;
+        document.getElementById("exp").innerHTML = player.info.experience;
+      }
+    }
+    arbTime++;
     // This physics only in multi-race.
     if (
       player.info.room == "multi-race" &&
@@ -480,7 +532,7 @@ function addNewPlayer(self, otherPlayer) {
 
 function addOtherPlayer(self, thisplayer) {
   console.log(thisplayer.info.y);
-  otherPlayer = {...thisplayer};
+  otherPlayer = { ...thisplayer };
 
   //otherPlayers.parts = {};
   otherPlayer.parts.container = self.add.container(
@@ -496,7 +548,6 @@ function addOtherPlayer(self, thisplayer) {
     otherPlayer.parts.body.width / 2
   );
   otherPlayer.parts.container.add(otherPlayer.parts.body);
-  otherPlayer.info.equips.mask = 'penguin';
   if (otherPlayer.info.equips.mask != "none") {
     otherPlayer.parts.mask = self.add
       .sprite(
@@ -528,7 +579,6 @@ function addPlayer(self, thisPlayer, cameras) {
     .sprite(player.info.x, player.info.y, player.info.playerType)
     .setScale(0.5, 0.5);
 
-
   player.parts.container.setSize(
     player.parts.body.width / 2,
     player.parts.body.width / 2
@@ -537,9 +587,18 @@ function addPlayer(self, thisPlayer, cameras) {
   player.parts.container.add(player.parts.body);
 
   if (player.info.equips.mask != "none") {
+    // Just default to invisible penguin
+    player.parts.mask = self.add
+      .sprite(player.info.x, player.info.y, "penguin")
+      .setScale(0.2, 0.2);
+    player.parts.mask.visible = false;
+    player.parts.container.add(player.parts.mask);
+  } else {
+    // Just default to invisible penguin
     player.parts.mask = self.add
       .sprite(player.info.x, player.info.y, player.info.equips.mask)
       .setScale(0.2, 0.2);
+    player.parts.mask.visible = false;
     player.parts.container.add(player.parts.mask);
   }
 

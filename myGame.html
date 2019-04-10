@@ -15,21 +15,24 @@
       <head id="header">
         <h1>World-Explorer</h1>
       </head>
+      <div id="stats">
+        <div class="tab">Gold: <span id="gold"></span></div>
+        <div class="tab">Exp: <span id="exp"></span> /100</div>
+        <div class="tab">Level: <span id="level"></span></div>
+        <div id="expBar"></div>
+      </div>
       <div id="accountInfo">
         <h2>Account</h2>
         <br />
         Logged in As<span id="username"> </span>
         <button onclick="logOut(); return false;">LOG OUT</button>
       </div>
-      <div id="stats">
-        <div class="tab">Gold: <span id="goldVal"></span></div>
-        <div class="tab">Exp: <span id="exp"></span></div>
-        <div class="tab">Level: <span id="level"></span></div>
-        <div id="expBar"></div>
-      </div>
       <div id="Game"></div>
-      <div id="actions"> Actions</div>
+      <div id="actions">
+        <h2>Actions</h2>
+        <button onclick="changeEquip(); return false;">Random Mask <br> (10 gold)</button>
+        <button onclick="enterRace(); return false;">EnterRace <br> (win stuff) </button>
+      </div>
     </div>
-    
   </body>
 </html>

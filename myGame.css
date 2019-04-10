@@ -67,24 +67,20 @@ h2 {
   font-size: 20px;
   height: 100%;
   float:right;
-  width: 10%;
+  width: 15%;
   padding-right: 30px;
   border-left: 1px solid black ;
 }
 
 h2 {
+  text-align: center;
   padding: 0;
   margin: 0;
 }
 
-
-
-#actions {
-  float: right;
-}
-#accountInfo {
+#accountInfo{
   margin: 1px;
-  float: right;
+  float: left;
   width: 20vw;
   text-align: center;
   display: block;
@@ -95,12 +91,50 @@ h2 {
   background: lightblue;  
 }
 
-button {
-  margin: 0 auto;
+#actions {
+  position: absolute;
+  width: 13vw;
+  right: 5vw;
+  bottom: 10vh;
+  padding: none;
+  margin: none;
+  height: 65vh;
+  background: lightblue;  
+  border: 1px solid black;
 }
 
+#actions >h2 {
+  background: rgba(152, 202, 219, 0.39);
+  border-bottom: 2px solid lightslategray;
+}
+
+#actions {
+  text-align: center;
+}
+
+#actions > button {
+  text-align: center;
+  margin: 0 auto;
+  background: gold;
+  width: 70%;
+}
+
+#actions > button:hover {
+  margin: 0 auto;
+  background: rgb(226, 226, 223);
+}
 
 canvas {
-  width: 90%;
+  width: 85%;
   height: 60vh;
+}
+
+@media (max-width: 500px) {
+  body {
+    overflow: scroll;
+  }
+  canvas {
+    width: 85%;
+    height: 60vh;
+  }
 }
