@@ -58,7 +58,7 @@ class PlayerInfo {
     this.databaseId = "";
     this.socketId = "";
     this.loggedIn = false;
-    this.facing = 'right';
+    this.facing = "right";
     this.username = username;
     this.playerType = playerType;
     this.gold = gold;
@@ -92,6 +92,19 @@ var config = {
     update: update
   }
 };
+
+function logOut() {
+  fetch("/logOut", {
+    method: "POST",
+    redirect: "follow",
+    body: {
+      username: player.username
+    }
+  }).then(res => {
+    window.localStorage.removeItem('user');
+    window.location.replace(res.url);
+  });
+}
 
 function loadMainMap() {}
 
@@ -264,6 +277,7 @@ function addControls(self) {
 //returns room and index in room
 function findPlayer(self, allPlayers) {
   allPlayers["lobby"]["players"].forEach((player, index) => {
+    console.log(player.info.socketId + "   " + self.socket.id);
     if (player.info.socketId == self.socket.id) {
       playerOffset = { room: player.info.room, index: index };
     }
@@ -320,8 +334,10 @@ function create() {
 
   this.socket = io();
 
-  
-  this.socket.emit("sendUserInfo", JSON.parse(window.localStorage.getItem("user")));
+  this.socket.emit(
+    "sendUserInfo",
+    JSON.parse(window.localStorage.getItem("user"))
+  );
   //Don't really have to update other values besides current room....
 
   this.socket.on("currentPlayers", allPlayers => {
@@ -345,9 +361,10 @@ function create() {
   });
 
   this.socket.on("deletePlayer", data => {
+    console.log("DELETINGGGGG");
     if (playerOffset.room === data.room) {
       let removingIndex;
-      
+
       // Adjust data.index by offset since otherPlayers array does not include player itself
       /* E.g. 
       1, 2, 3 in allPlayers
@@ -355,9 +372,9 @@ function create() {
       want to remove 3 in allPlayers, so index 2, have to -1 since we took player 2 out
       and playerOffset = index 1 <index 2. Now at just 1, playerOffset does not change
       */
-     // Indexes never be equal since socket is gone/page is closed
+      // Indexes never be equal since socket is gone/page is closed
       if (playerOffset.index < data.index) {
-        removingIndex = data.index-1;
+        removingIndex = data.index - 1;
       }
       // Have to decremenet offset since missing index now
       else if (playerOffset > data.index) {
@@ -377,30 +394,39 @@ function create() {
       const index = movementData.playerOffset.index;
       let playerIndex;
       if (playerOffset.index < index) {
-        console.log('lower');
-        playerIndex = index-1;
-      }
-      else if (playerOffset > index) {
-        console.log('higher');
+        console.log("lower");
+        playerIndex = index - 1;
+      } else if (playerOffset > index) {
+        console.log("higher");
         playerIndex = index;
       }
       console.log(otherPlayers);
       otherPlayers[playerIndex].info.x = movementData.x;
       otherPlayers[playerIndex].info.y = movementData.y;
       otherPlayers[playerIndex].info.facing = movementData.facing;
-      groupOfOtherPlayers.getChildren()[playerIndex].setPosition(otherPlayers[playerIndex].info.x,otherPlayers[playerIndex].info.y);
+      groupOfOtherPlayers
+        .getChildren()
+        [playerIndex].setPosition(
+          otherPlayers[playerIndex].info.x,
+          otherPlayers[playerIndex].info.y
+        );
       // This is a next level update hahahaha
-      otherPlayers[playerIndex].parts.body.anims.play(`${otherPlayers[playerIndex].info.playerType}-${otherPlayers[playerIndex].info.facing}`);
+      otherPlayers[playerIndex].parts.body.anims.play(
+        `${otherPlayers[playerIndex].info.playerType}-${
+          otherPlayers[playerIndex].info.facing
+        }`
+      );
     }
   });
-  
 }
 
 function update() {
   if (player) {
     // This physics only in multi-race.
-    if (player.info.room == 'multi-race' && 
-    player.parts.container.y >= mapHeight - player.parts.container.height) {
+    if (
+      player.info.room == "multi-race" &&
+      player.parts.container.y >= mapHeight - player.parts.container.height
+    ) {
       player.info.x = 0;
       player.info.y = 0;
       player.parts.container.setPosition(0, 0);
@@ -409,18 +435,18 @@ function update() {
       touchInput = false;
       player.parts.body.flipX = true;
       player.parts.container.body.setVelocityX(-160);
-      player.info.facing = 'left';
+      player.info.facing = "left";
       player.parts.body.anims.play(`${player.info.playerType}-left`, true);
     } else if (cursors.right.isDown) {
       touchInput = false;
       player.parts.body.flipX = false;
       player.parts.container.body.setVelocityX(160);
-      player.info.facing = 'right';
+      player.info.facing = "right";
       player.parts.body.anims.play(`${player.info.playerType}-right`, true);
     } else {
       if (!touchInput) {
         player.parts.container.body.setVelocityX(0);
-        player.info.facing = 'turn';
+        player.info.facing = "turn";
         player.parts.body.anims.play(`${player.info.playerType}-turn`);
         touchInput = false;
       }
@@ -438,14 +464,16 @@ function update() {
       oldPlayerPosition = {
         x: player.info.x,
         y: player.info.y,
-        facing : player.info.facing
-      }
+        facing: player.info.facing
+      };
     }
 
-    if (player.info.x !== oldPlayerPosition.x ||
-      player.info.y !== oldPlayerPosition.y) {
+    if (
+      player.info.x !== oldPlayerPosition.x ||
+      player.info.y !== oldPlayerPosition.y
+    ) {
       this.socket.emit("playerMovement", {
-        playerOffset: {...playerOffset},
+        playerOffset: { ...playerOffset },
         x: player.info.x,
         y: player.info.y,
         facing: player.info.facing
@@ -482,14 +510,16 @@ function addOtherPlayer(self, player) {
     otherPlayer.parts.body.width / 2
   );
   otherPlayer.parts.container.add(otherPlayer.parts.body);
-  otherPlayer.parts.mask = self.add
-    .sprite(
-      otherPlayer.info.x,
-      otherPlayer.info.y,
-      otherPlayer.info.equips.mask
-    )
-    .setScale(0.2, 0.2);
-  otherPlayer.parts.container.add(otherPlayer.parts.mask);
+  if (otherPlayer.info.equips.mask != "none") {
+    otherPlayer.parts.mask = self.add
+      .sprite(
+        otherPlayer.info.x,
+        otherPlayer.info.y,
+        otherPlayer.info.equips.mask
+      )
+      .setScale(0.2, 0.2);
+    otherPlayer.parts.container.add(otherPlayer.parts.mask);
+  }
 
   self.physics.world.enable(otherPlayer.parts.container);
   otherPlayer.parts.container.body.setBounce(0.2).setCollideWorldBounds(true);
@@ -501,23 +531,26 @@ function addOtherPlayer(self, player) {
 function addPlayer(self, thisPlayer, cameras) {
   player = { ...thisPlayer };
   console.log(player.info);
-  
+
   player.parts.container = self.add.container(player.info.x, player.info.y);
 
   player.parts.body = self.add
     .sprite(player.info.x, player.info.y, player.info.playerType)
     .setScale(0.5, 0.5);
-    
+
   player.parts.container.setSize(
     player.parts.body.width / 2,
     player.parts.body.width / 2
   );
   player.parts.body.setDepth(1);
   player.parts.container.add(player.parts.body);
-  player.parts.mask = self.add
-    .sprite(player.info.x, player.info.y, 'player.info.equips.mask')
-    .setScale(0.2, 0.2);
-  player.parts.container.add(player.parts.mask);
+
+  if (player.info.equips.mask != "none") {
+    player.parts.mask = self.add
+      .sprite(player.info.x, player.info.y, player.info.equips.mask)
+      .setScale(0.2, 0.2);
+    player.parts.container.add(player.parts.mask);
+  }
 
   self.physics.world.enable(player.parts.container);
   player.parts.container.body.setBounce(0.2).setCollideWorldBounds(true);

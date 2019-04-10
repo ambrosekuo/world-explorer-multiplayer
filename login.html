@@ -1,29 +1,50 @@
-<!doctype html> 
-<html lang="en"> 
-<head> 
+<!DOCTYPE html>
+<html lang="en">
+  <head>
     <meta charset="UTF-8" />
     <title>Login</title>
     <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
-    <script src="/socket.io/socket.io.js"> </script>
-    <link href="login.css" type="text/css"> 
-</head>
-<body id="Game">
-    <form action="/login" method="post">
-        <label for="username">Username:</label>
-        <input id="user" type='text' name="username">
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="login.css" type="text/css" />
+  </head>
+  <body id="Game">
+    <header>
+      <h1>World-Explorer</h1>
+    </header>
 
-        <label for="password">Password:</label>
-        <input id="password" type='text' name="password">
-        <input type="submit" value="OK">
-    </form>
+    <div id="wrapper">
+      <div id="login" class="main-panel">
+        <h1>Log in:</h1>
+        <form action="/login" method="post" onsubmit="submitFormLogin(event, this)">
+          <label for="username">Username:</label>
+          <input id="user-login" type="text" name="username" />
+          <br />
+          <label for="password">Password:</label>
+          <input type="password" id="password-login" type="text" name="password" />
+          <br/>
+          <button type="submit">Log in</button>
+          <h3 id="loginErrorMsg"></h3>
+        </form>
+      </div>
 
-<button onclick="login(); return false;"> Ghetto Login </button>
+      <div id="register" class="main-panel">
+        <h1>Register</h1>
+        <form action="/register" method="post" onsubmit="submitFormRegistration(event, this)">
+          <label for="username">Username:</label>
+          <input id="user-register" type="text" name="username" />
+          <br />
+          <label for="password">Password:</label>
+          <input id="password-register" type="password" name="password" /> <br/>
+          <button type="submit">Register</button>
+          <h3 id="registerErrorMsg"></h3>
+        </form>
+      </div>
+    </div>
+    <div id="sidebar">
+        <img src="assets/gamePicture.png">
+        <img src="assets/gamePicture2.png">
+    <div>
+  </body>
 
-<script>
-    function login() {
-        window.localStorage.username = document.getElementById('user').value;
-        window.localStorage.password = document.getElementById('password').value;
-    }
-</script>
-</body>
+  <script src="/login.js" type="text/javascript"></script>
 </html>

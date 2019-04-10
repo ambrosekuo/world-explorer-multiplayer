@@ -8,6 +8,7 @@ var mongoose = require("mongoose").set("debug", true);
 var db = mongoose.connection;
 var bodyParser = require("body-parser");
 var User = require("./user");
+var bcrypt = require("bcrypt");
 
 // Current worlds: 'lobby', 'mutli-race', 'single-mode'
 //add levels at the end
@@ -74,7 +75,7 @@ var allPlayers = {
 };
 
 const connectionString =
-  "mongodb+srv://ambrosek:oRVSzAjpaT0VKFYG@cluster0-foe98.azure.mongodb.net/playerBase?retryWrites=true";
+  "mongodb+srv://ambrosek:y5Wi4JbTI0LdPDTE@cluster0-emvsh.azure.mongodb.net/World-explorer?retryWrites=true";
 connections = [];
 
 app.use(bodyParser.json()); // Body-parser middleware
@@ -85,53 +86,96 @@ db.once("open", function() {
   console.log(" we're connected to data base!");
 });
 
-// Pretend you're at login screen, Make player
-// Check for playerType to see if exists, if n
-
-//Register
-
-// So you access this part when logged in, if not logged in, ask to log in via redirection
-// Either logged in and can get data in session
-//        Logged in:  Either already a player and info in session, or not and not in session
-
-//Log in
-
-/*
-if (req.body.use)
-User.comparePassword(req.body.password);
-*/
-
-//Logged in
-
-// Still have to deal with post/get
-
 function createDefaultPlayer(username) {
   // Initiate startY at 300 for drop effect
   let equips = { mask: "none" }; // So far just have mask in equips
   let gold = 100; // starting at 0 is just sad
-  return new PlayerInfo(
-    username,
-    0,
-    0,
-    "Female",
-    gold,
-    equips,
-    0,
-    0,
-    "lobby"
-  );
+  return new PlayerInfo(username, 0, 0, "Female", gold, equips, 0, 0, "lobby");
 }
-
-app.use("/assets", express.static(__dirname + "/assets"));
-app.use("/myGameJs", express.static(__dirname + "/myGame.js"));
 
 app.get("/", function(req, res) {
   // Have to send info here maybe? lol..
   res.sendFile(__dirname + "/login.html");
 });
 
+app.use(express.static(__dirname));
+app.use("/assets", express.static(__dirname + "/assets"));
+app.use("/myGame", express.static(__dirname + "/myGame.html"));
+app.use("/login", express.static(__dirname + "/login.html"));
+
+app.post("/loggedIn", (req, res) => {
+  User.findOne({ username: req.body.username })
+    .select("player username password")
+    .exec(function(err, user) {
+      if (user.player.loggedIn) {
+        res.json({ success: false, message: "Already Logged in" });
+      } else {
+        res.redirect("myGame");
+      }
+    });
+});
+
+app.post("/logOut", (req, res) => {
+  // Disconnect socket emitter should handle the removal of allPlayers/update database.
+  res.redirect("/login");
+});
+
 app.post("/login", (req, res) => {
-  console.log("Submitted:   " + req.body.username + "   " + req.body.password);
+  User.findOne({ username: req.body.username })
+    .select("player username password")
+    .exec(function(err, user) {
+      if (err) throw err;
+      if (!user) {
+        res.json({ success: false, message: "Could not Authenticate User" });
+      } else if (user) {
+        if (req.body.password) {
+          let validPasword = user.comparePassword(req.body.password);
+          if (!validPasword) {
+            res.json({
+              success: false,
+              message: "Could not validate Password"
+            });
+          } else {
+            if (user.player.loggedIn) {
+              res.json({ success: false, message: "Already Logged in" });
+            } else {
+              let username = encodeURIComponent(req.body.username);
+              res.redirect(`myGame/?user=${username}`);
+            }
+            //res.json({ success: true, message: 'User Authenticate', user: user});
+          }
+        } else {
+          res.json({ success: false, message: "No password provided" });
+        }
+      }
+    });
+});
+
+app.post("/register", (req, res) => {
+  var user = new User();
+  user.username = req.body.username;
+  user.password = req.body.password;
+  user.player = { ...createDefaultPlayer(req.body.username) };
+  if (
+    req.body.username == null ||
+    req.body.username == "" ||
+    req.body.password == null ||
+    req.body.password == ""
+  ) {
+    res.json({
+      success: false,
+      message: "Please enter your username and password"
+    });
+  } else {
+    user.save(function(err) {
+      if (err) {
+        console.log(err);
+        res.json({ success: false, message: "User name already exitst" });
+      } else {
+        res.json({ success: true, message: "User registered" });
+      }
+    });
+  }
 });
 
 app.get("/game", function(req, res) {
@@ -156,76 +200,58 @@ io.on("connection", function(socket) {
   //   then updates the database's user with socket.id to connect the html page to info
   socket.on("sendUserInfo", function(user) {
     userInfo = { ...user };
-    User.where({ username: user["username"] }).update({
-      $set: { "player.socketId": socket.id }
-    });
-    console.log(user["username"]);
+    User.where({ username: user["username"] })
+      .updateMany({
+        $set: { "player.socketId": socket.id, "player.loggedIn": "true" }
+      })
+      .then(data => {
+        User.findOne({ username: user["username"] })
+          .select("player username password")
+          .exec(function(err, user) {
+            newPlayer = new Player(user.player);
+            allPlayers[newPlayer.info.room].players.push(newPlayer);
+            console.log(allPlayers);
+            socket.emit("currentPlayers", allPlayers);
 
-    // Cheks if player exists and adds to allPlayers if so.
-    User.findOne({ username: user["username"] }, (err, doc) => {
-      console.log(doc.player.info);
-      if (err) {
-        console.log("User not in database");
-      } else {
-        let newPlayerInfo;
-        // Create new player or load exiting player info from database
-        if (doc.player.info == null) {
-          newPlayerInfo = { ...createDefaultPlayer(userInfo.username) };
-          console.log(newPlayerInfo);
-          newPlayerInfo.socketId = socket.id;
-          newPlayerInfo.databaseId = userInfo["_id"];
-          doc.player = { ...newPlayerInfo };
-          // Adding new player to array.
-        } else {
-          console.log("a");
-          // Not really a new player, but will see it as it is anyways.
-          newPlayerInfo = { ...doc.player };
-        }
-        newPlayer = new Player(newPlayerInfo);
-        console.log(newPlayer);
-        allPlayers[newPlayer.info.room].players.push(newPlayer);
-      }
-      console.log("save");
-      doc.save();
-    }).then(doc => {
-      console.log(allPlayers);
-      socket.emit("currentPlayers", allPlayers);
+            //Just have to change step by step now
+            socket.broadcast.emit("newPlayer", newPlayer);
 
-      //Just have to change step by step now
-      socket.broadcast.emit("newPlayer", newPlayer);
+            socket.on("disconnecting", function(data) {
+              let room = newPlayer.info.room;
+              let deleteInfo = {};
+              for (let i = 0; i < allPlayers[room]["players"].length; i++) {
+                if (socket.id == allPlayers[room]["players"][i].info.socketId) {
+                  deleteInfo = {
+                    socketId: socket.id,
+                    room: room,
+                    index: i
+                  };
+                }
+                io.emit("deletePlayer", deleteInfo);
+                allPlayers[room]["players"].splice(deleteInfo.i, 1);
+              }
 
-      socket.on("disconnecting", function(data) {
-        let room = newPlayer.info.room;
-
-        for (let i = 0; i < allPlayers[room]["players"][i]; i++) {
-          if (socket.id == allPlayers[room]["players"][i].info.socketId) {
-            io.emit("deletePlayer", {
-              socketId: socket.id,
-              room: room,
-              index: i
+              User.findOne(
+                { username: userInfo["username"] },
+                async (err, doc) => {
+                  doc.player.socketId = "";
+                  doc.player.loggedIn = "false";
+                  await doc.save();
+                }
+              ).then(data => {});
             });
-            allPlayers[room]["players"].splice(i, 1);
-            User.findById(userInfo["_id"], (err, doc) => {
-              //removes socket
-              doc.player.info.socketId = "";
-              // doc.save();
-            });
-            break;
-          }
-        }
-        allPlayers.splice(connections.indexOf(socket, 1));
-        console.log("Disconnected: %s sockets connected", connections.length);
-      });
-      socket.on("playerMovement", function(movementData) {
-        const room = movementData.playerOffset.room;
-        const index = movementData.playerOffset.index;
+            socket.on("playerMovement", function(movementData) {
+              const room = movementData.playerOffset.room;
+              const index = movementData.playerOffset.index;
 
-        allPlayers[room]["players"][index].info.x = movementData.x;
-        allPlayers[room]["players"][index].info.y = movementData.y;
-        allPlayers[room]["players"][index].info.facing = movementData.facing;
-        socket.broadcast.emit("playerMoved", movementData);
+              allPlayers[room]["players"][index].info.x = movementData.x;
+              allPlayers[room]["players"][index].info.y = movementData.y;
+              allPlayers[room]["players"][index].info.facing =
+                movementData.facing;
+              socket.broadcast.emit("playerMoved", movementData);
+            });
+          });
       });
-    });
   });
 });
 

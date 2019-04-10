@@ -6,7 +6,6 @@ mongoose.set("useCreateIndex", true);
 var UserSchema = new Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  businessFollowing: { type: Array, reequired: true },
   player: {
     databaseId: String,
     socketId: String,
