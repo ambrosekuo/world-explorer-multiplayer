@@ -12,7 +12,7 @@ span {
   display:block;
   margin-left: auto;
   margin-right: auto;
-  width: 80%;
+  width: 90%;
   height: 90vh;
   border: 1px  black solid;
 
@@ -32,29 +32,7 @@ h1 {
   margin: 0;
   background: lightblue;
 }
-h2 {
-  padding: 0;
-  margin: 0;
-}
 
-#accountInfo {
-  margin: 1px;
-  float: right;
-  width: 20vw;
-  text-align: center;
-  display: block;
-  border: 1px  black solid;
-  border: 0.1vw rgb(17, 15, 15) solid;
-  border-radius: 5px;
-  box-shadow: 0 20px 20px 0 rgba(0, 0, 0, 0.26);
-  background: lightblue;
-
-  
-}
-
-button {
-  margin: 0 auto;
-}
 
 #Game {
   float: left;
@@ -69,6 +47,7 @@ h2 {
 }
 
 #stats {
+  float: left;
   font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
   background: rgba(206, 202, 202, 0.836);
   margin-top: 12vh;
@@ -76,7 +55,6 @@ h2 {
   width: 70%;
   height: 5vh;
   border: 4px rgb(129, 125, 125) solid;
-  display: inline-block;
   flex-direction: column;
   justify-content: center;
   border: 0.1vw rgb(185, 182, 182) solid;
@@ -93,6 +71,34 @@ h2 {
   padding-right: 30px;
   border-left: 1px solid black ;
 }
+
+h2 {
+  padding: 0;
+  margin: 0;
+}
+
+
+
+#actions {
+  float: right;
+}
+#accountInfo {
+  margin: 1px;
+  float: right;
+  width: 20vw;
+  text-align: center;
+  display: block;
+  border: 1px  black solid;
+  border: 0.1vw rgb(17, 15, 15) solid;
+  border-radius: 5px;
+  box-shadow: 0 20px 20px 0 rgba(0, 0, 0, 0.26);
+  background: lightblue;  
+}
+
+button {
+  margin: 0 auto;
+}
+
 
 canvas {
   width: 90%;
