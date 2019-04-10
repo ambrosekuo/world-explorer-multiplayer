@@ -97,13 +97,20 @@ var config = {
 };
 
 function logOut() {
+  console.log(player.info.level);
   fetch("/logOut", {
     method: "POST",
     redirect: "follow",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       username: player.username,
-      socketId: socket.id
+      socketId: socket.id,
+      room: player.info.room,
+      experience: player.info.experience,
+      level: player.info.level,
+      gold: player.info.gold,
+      mask: player.info.equips.mask,
+      x: player.parts.container.x,
     })
   }).then(res => {
     window.localStorage.removeItem("user");
@@ -586,7 +593,7 @@ function addPlayer(self, thisPlayer, cameras) {
   player.parts.body.setDepth(1);
   player.parts.container.add(player.parts.body);
 
-  if (player.info.equips.mask != "none") {
+  if (player.info.equips.mask == "none") {
     // Just default to invisible penguin
     player.parts.mask = self.add
       .sprite(player.info.x, player.info.y, "penguin")
@@ -598,7 +605,7 @@ function addPlayer(self, thisPlayer, cameras) {
     player.parts.mask = self.add
       .sprite(player.info.x, player.info.y, player.info.equips.mask)
       .setScale(0.2, 0.2);
-    player.parts.mask.visible = false;
+    player.parts.mask.visible = true;
     player.parts.container.add(player.parts.mask);
   }
 

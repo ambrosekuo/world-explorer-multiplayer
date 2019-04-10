@@ -32,7 +32,6 @@ class Player {
 class PlayerInfo {
   constructor(
     username,
-    password,
     startX,
     startY,
     playerType,
@@ -118,31 +117,39 @@ app.post("/loggedIn", (req, res) => {
 });
 
 app.post("/logOut", (req, res) => {
-  let room = newPlayer.info.room;
+  let room = req.body.room;
   let deleteInfo = {};
+  let playerLeaving;
   for (let i = 0; i < allPlayers[room]["players"].length; i++) {
-    if (socket.id == allPlayers[room]["players"][i].info.socketId) {
+    if (req.body.socketId == allPlayers[room]["players"][i].info.socketId) {
+      playerLeaving = { ...allPlayers[room]["players"][i] };
+      console.log({ ...allPlayers[room]["players"][i].info });
       deleteInfo = {
-        socketId: socket.id,
+        socketId: req.body.id,
         room: room,
         index: i
       };
     }
-    socket.broadcast.emit("deletePlayer", deleteInfo);
     allPlayers[room]["players"].splice(deleteInfo.i, 1);
   }
+  console.log(req.body);
   User.updateMany(
     { username: req.body.username },
     {
       $set: {
         "player.socketId": "",
-        "player.loggedIn": "false"
+        "player.loggedIn": "false",
+        "player.gold": req.body.gold,
+        "player.experience": req.body.experience,
+        "player.level": req.body.level,
+        "player.equips.mask": req.body.mask,
+        "player.x": req.body.x,
       }
     }
-  ).exec();
+  ).exec((err, data) => {
+    res.redirect("/login");
+  });
   // Disconnect socket emitter should handle the removal of allPlayers/update database.logi
-
-  res.redirect("/login");
 });
 
 app.post("/login", (req, res) => {
@@ -182,8 +189,9 @@ app.post("/login", (req, res) => {
 app.post("/register", (req, res) => {
   var user = new User();
   user.username = req.body.username;
+  user.password = req.body.password;
   user.player = {
-    ...createDefaultPlayer(req.body.username, req.body.password)
+    ...createDefaultPlayer(req.body.username)
   };
   if (
     req.body.username == null ||
@@ -217,7 +225,7 @@ function updateDatabase(player) {
   User.findOne({ username: player.username })
     .select("player username password")
     .exec(function(err, user) {
-      user.info.room = player.info.room;
+      user.player.room = player.info.room;
     });
 }
 
@@ -279,11 +287,14 @@ io.on("connection", function(socket) {
             //Just have to change step by step now
             socket.broadcast.emit("newPlayer", newPlayer);
 
+            let playerLeaving;
             socket.on("disconnecting", function(data) {
               let room = newPlayer.info.room;
               let deleteInfo = {};
               for (let i = 0; i < allPlayers[room]["players"].length; i++) {
                 if (socket.id == allPlayers[room]["players"][i].info.socketId) {
+                  //playerLeaving = allPlayers[room]["players"][i];
+                  console.log(playerLeaving);
                   deleteInfo = {
                     socketId: socket.id,
                     room: room,
