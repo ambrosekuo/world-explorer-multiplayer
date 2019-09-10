@@ -143,7 +143,7 @@ app.post("/logOut", (req, res) => {
         "player.experience": req.body.experience,
         "player.level": req.body.level,
         "player.equips.mask": req.body.mask,
-        "player.x": req.body.x,
+        "player.x": req.body.x
       }
     }
   ).exec((err, data) => {
@@ -267,71 +267,92 @@ io.on("connection", function(socket) {
     socket.emit("currentPlayers", allPlayers);
   });
 
+  // logs in user if logged in else returns false
+  async function checkLogIn(user) {
+    User.findOne({ username: user["username"] }).exec((err, user) => {
+      if (!user.player.loggedIn) {
+        return new Promise((res, rej) => {
+          User.where({ username: user["username"] })
+            .updateMany({
+              $set: { "player.socketId": socket.id, "player.loggedIn": "true" }
+            })
+            .then(() => {
+              return true;
+            });
+        });
+      } else {
+        return new Promise((res, rej) => {
+          resolve(false);
+        });
+      }
+    });
+  }
+
   // Gets user info from game's localstorage being emitted in myGame.js
   //   then updates the database's user with socket.id to connect the html page to info
-  socket.on("sendUserInfo", function(user) {
+  socket.on("sendUserInfo", async function(user) {
     userInfo = { ...user };
-    User.where({ username: user["username"] })
-      .updateMany({
-        $set: { "player.socketId": socket.id, "player.loggedIn": "true" }
-      })
-      .then(data => {
-        User.findOne({ username: user["username"] })
-          .select("player username password")
-          .exec(function(err, user) {
-            newPlayer = new Player(user.player);
-            allPlayers[newPlayer.info.room].players.push(newPlayer);
-            console.log(allPlayers[newPlayer.info.room].players);
-            socket.emit("currentPlayers", allPlayers);
 
-            //Just have to change step by step now
-            socket.broadcast.emit("newPlayer", newPlayer);
+    const loggedIn = await checkLogIn(userInfo);
 
-            let playerLeaving;
-            socket.on("disconnecting", function(data) {
-              let room = newPlayer.info.room;
-              let deleteInfo = {};
-              for (let i = 0; i < allPlayers[room]["players"].length; i++) {
-                if (socket.id == allPlayers[room]["players"][i].info.socketId) {
-                  //playerLeaving = allPlayers[room]["players"][i];
-                  console.log(playerLeaving);
-                  deleteInfo = {
-                    socketId: socket.id,
-                    room: room,
-                    index: i
-                  };
-                }
-                io.emit("deletePlayer", deleteInfo);
-                allPlayers[room]["players"].splice(deleteInfo.i, 1);
+    if (loggedIn) {
+      User.findOne({ username: user["username"] })
+        .select("player username password")
+        .exec(function(err, user) {
+          newPlayer = new Player(user.player);
+          allPlayers[newPlayer.info.room].players.push(newPlayer);
+          console.log(allPlayers[newPlayer.info.room].players);
+
+          //Sends all the current players plus itself to the initialized socket
+          socket.emit("currentPlayers", allPlayers);
+
+          //Just have to change step by step now
+          socket.broadcast.emit("newPlayer", newPlayer);
+
+          let playerLeaving;
+          socket.on("disconnecting", function(data) {
+            let room = newPlayer.info.room;
+            let deleteInfo = {};
+            for (let i = 0; i < allPlayers[room]["players"].length; i++) {
+              if (socket.id == allPlayers[room]["players"][i].info.socketId) {
+                //playerLeaving = allPlayers[room]["players"][i];
+                console.log(playerLeaving);
+                deleteInfo = {
+                  socketId: socket.id,
+                  room: room,
+                  index: i
+                };
               }
+              io.emit("deletePlayer", deleteInfo);
+              allPlayers[room]["players"].splice(deleteInfo.i, 1);
+            }
 
-              User.updateMany(
-                { username: userInfo["username"] },
-                {
-                  $set: {
-                    "player.socketId": "",
-                    "player.loggedIn": "false"
-                  }
-                }
-              ).exec();
-            });
-            socket.on("playerMovement", function(player) {
-              const room = player.info.room;
-              for (let i = 0; i < allPlayers[room]["players"].length; i++) {
-                if (
-                  allPlayers[room]["players"][i].info.socketId ==
-                  player.info.socketId
-                ) {
-                  allPlayers[room]["players"][i].info.x = player.info.x;
-                  allPlayers[room]["players"][i].info.y = player.info.y;
-                  allPlayers[room]["players"][i].info.facing =
-                    player.info.facing;
+            User.updateMany(
+              { username: userInfo["username"] },
+              {
+                $set: {
+                  "player.socketId": "",
+                  "player.loggedIn": "false"
                 }
               }
-              socket.broadcast.emit("playerMoved", player);
-            });
+            ).exec();
           });
-      });
+          socket.on("playerMovement", function(player) {
+            const room = player.info.room;
+            for (let i = 0; i < allPlayers[room]["players"].length; i++) {
+              if (
+                allPlayers[room]["players"][i].info.socketId ==
+                player.info.socketId
+              ) {
+                allPlayers[room]["players"][i].info.x = player.info.x;
+                allPlayers[room]["players"][i].info.y = player.info.y;
+                allPlayers[room]["players"][i].info.facing = player.info.facing;
+              }
+            }
+            socket.broadcast.emit("playerMoved", player);
+          });
+        });
+    }
   });
 });
 

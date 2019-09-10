@@ -110,7 +110,7 @@ function logOut() {
       level: player.info.level,
       gold: player.info.gold,
       mask: player.info.equips.mask,
-      x: player.parts.container.x,
+      x: player.parts.container.x
     })
   }).then(res => {
     window.localStorage.removeItem("user");
@@ -122,8 +122,12 @@ function changeEquip() {
   const cost = 10;
   if (player) {
     if (player.info.gold > cost) {
-      const randomAnimalPng = animalArray[Math.floor(Math.random() * (animalArray.length - 1))];
-      player.info.equips.mask = randomAnimalPng.substring(0, randomAnimalPng.indexOf('.'));
+      const randomAnimalPng =
+        animalArray[Math.floor(Math.random() * (animalArray.length - 1))];
+      player.info.equips.mask = randomAnimalPng.substring(
+        0,
+        randomAnimalPng.indexOf(".")
+      );
       player.info.gold -= cost;
       console.log(player.info.equips.mask);
       player.parts.mask.setTexture(player.info.equips.mask);
@@ -135,10 +139,10 @@ function changeEquip() {
 
 function enterRace() {
   const oldRoom = player.info.room;
-  player.info.room = 'multi-race';
+  player.info.room = "multi-race";
   otherPlayers = [];
-  groupOfOtherPlayers  = [];
-  socket.emit("changeRoom", {...player, oldRoom: oldRoom});
+  groupOfOtherPlayers = [];
+  socket.emit("changeRoom", { ...player, oldRoom: oldRoom });
 }
 
 let makeNewMask = false;
@@ -166,10 +170,10 @@ var groupOfOtherPlayers; //Otherplayers in same room, stores an array of contain
 
 let touchInput = false;
 
-// Gets a platform group an adds more platforma
 const typeOfChars = ["Adventurer", "Female", "Player", "Soldier", "Zombie"];
 
 function preload() {
+  // Gets a platform group an adds more platforma
   this.load.image(
     "desert",
     "assets/Background/Backgrounds/backgroundColorDesert.png"
@@ -399,20 +403,37 @@ function create() {
   socket.emit("sendUserInfo", JSON.parse(window.localStorage.getItem("user")));
   //Don't really have to update other values befindPlasides current room....
 
-  socket.on("currentPlayers", allPlayers => {
+  socket.once("currentPlayers", allPlayers => {
     // Need to find room first to find player
     const playerRoom = findPlayerRoom(allPlayers);
     console.log(playerRoom);
     createLevel(self, playerRoom, platforms);
+    console.log(allPlayers);
 
+    // **Massive BUG FIX ** Adds others only when it itself has been updated already.
+    // Current fix is to just loop through twice.
+    // Loops through all the players in the room, if it's the same player, add itself.
+    // Adds itself first,
+
+    let playerIndex;
     for (let i = 0; i < allPlayers[playerRoom]["players"].length; i++) {
       if (allPlayers[playerRoom]["players"][i].info.socketId == socket.id) {
+        console.log(allPlayers[playerRoom]["players"][i]);
         addPlayer(self, allPlayers[playerRoom]["players"][i]);
         updateHtmlValues();
-      } else {
+        playerIndex = i;
+        break;
+      }
+    }
+
+    for (let i = 0; i < allPlayers[playerRoom]["players"].length; i++) {
+      if (playerIndex != i) {
+        console.log(allPlayers[playerRoom]["players"][i]);
         addOtherPlayer(self, allPlayers[playerRoom]["players"][i]);
       }
     }
+    console.log(player.parts.container);
+    console.log(groupOfOtherPlayers.getChildren());
   });
 
   socket.on("newPlayer", newPlayer => {
@@ -542,6 +563,7 @@ function addOtherPlayer(self, thisplayer) {
   otherPlayer = { ...thisplayer };
 
   //otherPlayers.parts = {};
+
   otherPlayer.parts.container = self.add.container(
     otherPlayer.info.x,
     otherPlayer.info.y
@@ -576,12 +598,14 @@ function addOtherPlayer(self, thisplayer) {
   groupOfOtherPlayers.setDepth(1);
 }
 
+// A player has a container for its sprite parts and equips are just grouping it together
 function addPlayer(self, thisPlayer, cameras) {
   player = { ...thisPlayer };
   console.log(player.info);
 
   player.parts.container = self.add.container(player.info.x, player.info.y);
 
+  //Add the sprite body
   player.parts.body = self.add
     .sprite(player.info.x, player.info.y, player.info.playerType)
     .setScale(0.5, 0.5);
@@ -593,6 +617,7 @@ function addPlayer(self, thisPlayer, cameras) {
   player.parts.body.setDepth(1);
   player.parts.container.add(player.parts.body);
 
+  // Check equips, currently just a mask
   if (player.info.equips.mask == "none") {
     // Just default to invisible penguin
     player.parts.mask = self.add
