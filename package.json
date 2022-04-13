@@ -18,7 +18,7 @@
     "nodemon": "^1.18.10",
     "pg": "^8.7.3",
     "phaser": "^3.16.2",
-    "socket.io": "^2.2.0"
+    "socket.io": "^2.4.0"
   },
   "devDependencies": {
     "webpack": "^5.72.0",
