@@ -1,11 +1,15 @@
-Run with 
-node server.js
-or just go to
+Requires a .env file with the settings to connect to a Postgres instance:
+NODE_ENV=
+POSTGRES_HOST=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_DATABASE=
 
-https://aks-world-explorer.herokuapp.com/
 
 
+Currently the smallest demo can be seen at:
 https://world-explorer-multiplayer.herokuapp.com/ 
-for the initial prototype/racing game.
+
+*Just includes the initial prototype/"racing" game. Sockets/database is broken on live.
 
 
