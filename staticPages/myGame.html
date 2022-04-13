@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>legends of league</title>    
+    <script src="https://unpkg.com/lodash@4.17.20"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.51.0/dist/phaser-arcade-physics.min.js"></script> 
+
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="myGame.css" type="text/css" />
+    <script src="main.js"></script>
+
+    <script src="myGame.js" type="text/javascript" defer></script>
+    <script src="/lib/phaser.min.js" type="text/javascript" defer></script>
+  </head>
+  <body>
+    <div id="grid-container">
+      <head id="header">
+        <h1>World-Explorer</h1>
+      </head>
+      <div id="stats">
+        <div class="tab">Gold: <span id="gold"></span></div>
+        <div class="tab">Exp: <span id="exp"></span> /100</div>
+        <div class="tab">Level: <span id="level"></span></div>
+        <div id="expBar"></div>
+      </div>
+      <div id="accountInfo">
+        <h2>Account</h2>
+        <br />
+        Logged in As<span id="username"> </span>
+        <button onclick="logOut(); return false;">LOG OUT</button>
+      </div>
+      <div id="Game"></div>
+      <div id="actions">
+        <h2>Actions</h2>
+        <button onclick="changeEquip(); return false;">Random Mask <br> (10 gold)</button>
+        <button onclick="//enterRace(); return false;">LOCKED[EnterRace] <br> (win stuff) </button>
+      </div>
+    </div>
+  </body>
+</html>

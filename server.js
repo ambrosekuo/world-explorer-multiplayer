@@ -96,13 +96,13 @@ function createDefaultPlayer(username) {
 
 app.get("/", function (req, res) {
   // Have to send info here maybe? lol..
-  res.sendFile(__dirname + "/login.html");
+  res.sendFile(__dirname + "/staticPages/login.html");
 });
 
 app.use(express.static(__dirname));
 app.use("/assets", express.static(__dirname + "/assets"));
-app.use("/myGame", express.static(__dirname + "/myGame.html"));
-app.use("/login", express.static(__dirname + "/login.html"));
+app.use("/myGame", express.static(__dirname + "/staticPages/myGame.html"));
+app.use("/login", express.static(__dirname + "/staticPages/login.html"));
 
 app.post("/loggedIn", (req, res) => {
   User.findOne({ username: req.body.username })
