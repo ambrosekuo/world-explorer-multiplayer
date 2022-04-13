@@ -4,10 +4,12 @@ var port = process.env.PORT || 8080;
 var server = require("http").Server(app);
 var io = require("socket.io").listen(server);
 
-var mongoose = require("mongoose").set("debug", true);
-var db = mongoose.connection;
+// var mongoose = require("mongoose").set("debug", true);
+// var db = mongoose.connection;
 var bodyParser = require("body-parser");
 var User = require("./user");
+var db = require("./database/queries");
+var encrypt = require("./services/encryptionService");
 
 // Current worlds: 'lobby', 'mutli-race', 'single-mode'
 //add levels at the end
@@ -24,7 +26,7 @@ class Player {
     this.parts = {
       container: {},
       mask: {},
-      body: {}
+      body: {},
     };
   }
 }
@@ -60,30 +62,30 @@ class PlayerInfo {
 var allPlayers = {
   lobby: {
     players: [],
-    mapInfo: {}
+    mapInfo: {},
   },
   // Can nest multi-race to another depth if wanting to add levels
   "multi-race": {
     players: [],
-    mapInfo: {}
+    mapInfo: {},
   },
   "single-mode": {
     players: [],
-    mapInfo: {}
-  }
+    mapInfo: {},
+  },
 };
 
-const connectionString =
-  "mongodb+srv://ambrosek:y5Wi4JbTI0LdPDTE@cluster0-emvsh.azure.mongodb.net/World-explorer?retryWrites=true";
+// const connectionString =
+//   "mongodb+srv://ambrosek:y5Wi4JbTI0LdPDTE@cluster0-emvsh.azure.mongodb.net/World-explorer?retryWrites=true";
 connections = [];
 
 app.use(bodyParser.json()); // Body-parser middleware
 app.use(bodyParser.urlencoded({ extended: true }));
-mongoose.connect(connectionString, { useNewUrlParser: true }); // connect to mongodb database
-db.on("error", console.error.bind(console, "connection error:"));
-db.once("open", function() {
-  console.log(" we're connected to data base!");
-});
+// mongoose.connect(connectionString, { useNewUrlParser: true }); // connect to mongodb database
+// db.on("error", console.error.bind(console, "connection error:"));
+// db.once("open", function() {
+//   console.log(" we're connected to data base!");
+// });
 
 function createDefaultPlayer(username) {
   // Initiate startY at 300 for drop effect
@@ -92,7 +94,7 @@ function createDefaultPlayer(username) {
   return new PlayerInfo(username, 0, 0, "Female", gold, equips, 0, 0, "lobby");
 }
 
-app.get("/", function(req, res) {
+app.get("/", function (req, res) {
   // Have to send info here maybe? lol..
   res.sendFile(__dirname + "/login.html");
 });
@@ -105,7 +107,7 @@ app.use("/login", express.static(__dirname + "/login.html"));
 app.post("/loggedIn", (req, res) => {
   User.findOne({ username: req.body.username })
     .select("player username password")
-    .exec(function(err, user) {
+    .exec(function (err, user) {
       if (user) {
         if (user.player.loggedIn) {
           res.json({ success: false, message: "Already Logged in" });
@@ -127,7 +129,7 @@ app.post("/logOut", (req, res) => {
       deleteInfo = {
         socketId: req.body.id,
         room: room,
-        index: i
+        index: i,
       };
     }
     allPlayers[room]["players"].splice(deleteInfo.i, 1);
@@ -143,8 +145,8 @@ app.post("/logOut", (req, res) => {
         "player.experience": req.body.experience,
         "player.level": req.body.level,
         "player.equips.mask": req.body.mask,
-        "player.x": req.body.x
-      }
+        "player.x": req.body.x,
+      },
     }
   ).exec((err, data) => {
     res.redirect("/login");
@@ -152,47 +154,7 @@ app.post("/logOut", (req, res) => {
   // Disconnect socket emitter should handle the removal of allPlayers/update database.logi
 });
 
-app.post("/login", (req, res) => {
-  User.findOne({ username: req.body.username })
-    .select("player username password")
-    .exec(function(err, user) {
-      console.log(req.body);
-      if (err) throw err;
-      if (!user) {
-        res.json({ success: false, message: "Could not Authenticate User" });
-      } else if (user) {
-        if (req.body.password) {
-          let validPassword = user.comparePassword(req.body.password);
-          console.log(user.password + "  " + req.body.password);
-          console.log(validPassword);
-          if (!validPassword) {
-            res.json({
-              success: false,
-              message: "Could not validate Password"
-            });
-          } else {
-            if (user.player.loggedIn) {
-              res.json({ success: false, message: "Already Logged in" });
-            } else {
-              let username = encodeURIComponent(req.body.username);
-              res.redirect(`myGame/?user=${username}`);
-            }
-            //res.json({ success: true, message: 'User Authenticate', user: user});
-          }
-        } else {
-          res.json({ success: false, message: "No password provided" });
-        }
-      }
-    });
-});
-
-app.post("/register", (req, res) => {
-  var user = new User();
-  user.username = req.body.username;
-  user.password = req.body.password;
-  user.player = {
-    ...createDefaultPlayer(req.body.username)
-  };
+app.post("/login", async (req, res) => {
   if (
     req.body.username == null ||
     req.body.username == "" ||
@@ -201,21 +163,52 @@ app.post("/register", (req, res) => {
   ) {
     res.json({
       success: false,
-      message: "Please enter your username and password"
+      message: "Please enter your username and password",
     });
   } else {
-    user.save(function(err) {
-      if (err) {
-        console.log(err);
-        res.json({ success: false, message: "User name already exist" });
+    let user = await db.getUser(req.body.username, req.body.password);
+    if (user) {
+      if (user.loggedIn) {
+        res.json({ success: false, message: "Already Logged in" });
       } else {
-        res.json({ success: true, message: "User registered" });
+        let username = encodeURIComponent(req.body.username);
+        db.logInUser(req.body.username);
+        res.redirect(`myGame/?user=${username}`);
       }
+    } else {
+      res.json({
+        success: false,
+        message: "Username does not exist or password is unsuccessful",
+      });
+    }
+  }
+});
+
+app.post("/register", async (req, res) => {
+  if (
+    req.body.username == null ||
+    req.body.username == "" ||
+    req.body.password == null ||
+    req.body.password == ""
+  ) {
+    res.json({
+      success: false,
+      message: "Please enter your username and password",
+    });
+  } else {
+    const username = req.body.username;
+    console.log(username);
+    const password = await encrypt.generateHashedPassword(req.body.password);
+    console.log(password);
+    await db.addUser(username, password);
+    res.json({
+      success: true,
+      message: "Sucessfully registered",
     });
   }
 });
 
-app.get("/game", function(req, res) {
+app.get("/game", function (req, res) {
   // Have to send info here maybe? lol..
   res.sendFile(__dirname + "/myGame.html");
 });
@@ -224,7 +217,7 @@ app.get("/game", function(req, res) {
 function updateDatabase(player) {
   User.findOne({ username: player.username })
     .select("player username password")
-    .exec(function(err, user) {
+    .exec(function (err, user) {
       user.player.room = player.info.room;
     });
 }
@@ -242,7 +235,7 @@ function updateAllPlayers(player) {
 
 // Reminder
 // Have session info and can access database via User schema
-io.on("connection", function(socket) {
+io.on("connection", function (socket) {
   connections.push(socket);
 
   //******** */
@@ -253,7 +246,7 @@ io.on("connection", function(socket) {
   let userInfo;
   let newPlayer;
 
-  socket.on("changeRoom", playerWithOldRoom => {
+  socket.on("changeRoom", (playerWithOldRoom) => {
     console.log(
       playerWithOldRoom.oldRoom + "   " + playerWithOldRoom.info.room
     );
@@ -262,7 +255,7 @@ io.on("connection", function(socket) {
     updateAllPlayers(playerWithOldRoom);
     socket.broadcast.emit("deletePlayer", {
       socketId: playerWithOldRoom.socketId,
-      room: playerWithOldRoom.oldRoom
+      room: playerWithOldRoom.oldRoom,
     });
     socket.emit("currentPlayers", allPlayers);
   });
@@ -274,7 +267,7 @@ io.on("connection", function(socket) {
         return new Promise((res, rej) => {
           User.where({ username: user["username"] })
             .updateMany({
-              $set: { "player.socketId": socket.id, "player.loggedIn": "true" }
+              $set: { "player.socketId": socket.id, "player.loggedIn": "true" },
             })
             .then(() => {
               return true;
@@ -290,15 +283,18 @@ io.on("connection", function(socket) {
 
   // Gets user info from game's localstorage being emitted in myGame.js
   //   then updates the database's user with socket.id to connect the html page to info
-  socket.on("sendUserInfo", async function(user) {
+  socket.on("sendUserInfo", async function (user) {
     userInfo = { ...user };
 
-    const loggedIn = await checkLogIn(userInfo);
+    const loggedIn = true;
+    console.log("logged in");
 
     if (loggedIn) {
+      //Sends all the current players plus itself to the initialized socket
+      socket.emit("currentPlayers", allPlayers);
       User.findOne({ username: user["username"] })
         .select("player username password")
-        .exec(function(err, user) {
+        .exec(function (err, user) {
           newPlayer = new Player(user.player);
           allPlayers[newPlayer.info.room].players.push(newPlayer);
           console.log(allPlayers[newPlayer.info.room].players);
@@ -310,7 +306,7 @@ io.on("connection", function(socket) {
           socket.broadcast.emit("newPlayer", newPlayer);
 
           let playerLeaving;
-          socket.on("disconnecting", function(data) {
+          socket.on("disconnecting", function (data) {
             let room = newPlayer.info.room;
             let deleteInfo = {};
             for (let i = 0; i < allPlayers[room]["players"].length; i++) {
@@ -320,7 +316,7 @@ io.on("connection", function(socket) {
                 deleteInfo = {
                   socketId: socket.id,
                   room: room,
-                  index: i
+                  index: i,
                 };
               }
               io.emit("deletePlayer", deleteInfo);
@@ -332,12 +328,12 @@ io.on("connection", function(socket) {
               {
                 $set: {
                   "player.socketId": "",
-                  "player.loggedIn": "false"
-                }
+                  "player.loggedIn": "false",
+                },
               }
             ).exec();
           });
-          socket.on("playerMovement", function(player) {
+          socket.on("playerMovement", function (player) {
             const room = player.info.room;
             for (let i = 0; i < allPlayers[room]["players"].length; i++) {
               if (
@@ -356,6 +352,6 @@ io.on("connection", function(socket) {
   });
 });
 
-server.listen(port, function() {
+server.listen(port, function () {
   console.log(`Listening on ${server.address().port}`);
 });
